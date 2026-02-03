@@ -170,16 +170,19 @@ export function useSongs(userId: string | undefined) {
       title, 
       artist,
       collectionId,
+      imageUrl,
     }: { 
       id: string; 
       title?: string; 
       artist?: string; 
       collectionId?: string | null;
+      imageUrl?: string | null;
     }) => {
       const updateData: Record<string, unknown> = {};
       if (title !== undefined) updateData.title = title;
       if (artist !== undefined) updateData.artist = artist;
       if (collectionId !== undefined) updateData.collection_id = collectionId;
+      if (imageUrl !== undefined) updateData.image_url = imageUrl;
 
       const { data, error } = await supabase
         .from('songs')
@@ -190,6 +193,22 @@ export function useSongs(userId: string | undefined) {
       
       if (error) throw error;
       return data as Song;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['songs', userId] });
+    },
+  });
+
+  const generateSongImage = useMutation({
+    mutationFn: async ({ id, title, artist }: { id: string; title: string; artist?: string | null }) => {
+      const { data, error } = await supabase.functions.invoke('generate-card-image', {
+        body: { title, artist, itemType: 'song', itemId: id },
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      return data.imageUrl as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songs', userId] });
@@ -218,5 +237,6 @@ export function useSongs(userId: string | undefined) {
     createSong,
     updateSong,
     deleteSong,
+    generateSongImage,
   };
 }

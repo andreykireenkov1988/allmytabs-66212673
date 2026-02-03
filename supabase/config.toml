@@ -1,1 +1,7 @@
 project_id = "sdutpbizawptrmnlbnkc"
+
+[functions.generate-card-image]
+verify_jwt = false
+
+[functions.parse-song]
+verify_jwt = false
