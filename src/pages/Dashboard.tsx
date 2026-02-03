@@ -4,7 +4,7 @@ import { useSongs } from '@/hooks/useSongs';
 import { useHarmonicaTabs } from '@/hooks/useHarmonicaTabs';
 import { useCollections } from '@/hooks/useCollections';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
-import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 import { SongCard } from '@/components/song/SongCard';
 import { ImportSongDialog } from '@/components/song/ImportSongDialog';
 import { UnifiedSongEditor } from '@/components/song/UnifiedSongEditor';
@@ -348,11 +348,11 @@ export default function Dashboard() {
 
   // Editing views
   if (editingSong) {
-    return <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+    return <div className="min-h-screen bg-background flex flex-col">
+        <main className="container mx-auto px-4 py-8 flex-1">
           <UnifiedSongEditor song={editingSong} onBack={() => setEditingSong(null)} onSaveSong={handleSaveSong} isSaving={updateSong.isPending} />
         </main>
+        <Footer />
       </div>;
   }
   if (editingHarmonicaTab) {
@@ -366,8 +366,7 @@ export default function Dashboard() {
   const showSongs = activeTab === 'all' || activeTab === 'songs';
   const showHarmonica = activeTab === 'all' || activeTab === 'harmonica';
   const selectedCollection = collections.find(c => c.id === selectedCollectionId);
-  return <div className="min-h-screen bg-background">
-      <Header />
+  return <div className="min-h-screen bg-background flex flex-col">
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8 flex-wrap">
           <div className="flex gap-2 flex-wrap">
@@ -444,5 +443,6 @@ export default function Dashboard() {
             </TabsContent>
           </Tabs>}
       </main>
+      <Footer />
     </div>;
 }
