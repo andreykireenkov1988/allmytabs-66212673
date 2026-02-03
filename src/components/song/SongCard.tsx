@@ -1,7 +1,8 @@
 import { Song, isChordsContent, isTablatureContent } from '@/types/song';
+import { Collection } from '@/types/collection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Music2, Trash2, ExternalLink, Guitar } from 'lucide-react';
+import { Music2, Trash2, ExternalLink, Guitar, FolderInput } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -14,14 +15,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
 
 interface SongCardProps {
   song: Song;
   onEdit: (song: Song) => void;
   onDelete: (id: string) => void;
+  collections?: Collection[];
+  onMove?: (collectionId: string | null) => void;
 }
 
-export function SongCard({ song, onEdit, onDelete }: SongCardProps) {
+export function SongCard({ song, onEdit, onDelete, collections, onMove }: SongCardProps) {
   const blocks = song.blocks || [];
   
   // Get preview from first chords block
@@ -58,6 +62,24 @@ export function SongCard({ song, onEdit, onDelete }: SongCardProps) {
             </div>
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {collections && onMove && collections.length > 0 && (
+              <MoveToCollectionDialog
+                collections={collections}
+                currentCollectionId={song.collection_id}
+                onMove={onMove}
+                itemName={song.title}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <FolderInput className="w-4 h-4" />
+                  </Button>
+                }
+              />
+            )}
             {song.source_url && (
               <Button
                 variant="ghost"

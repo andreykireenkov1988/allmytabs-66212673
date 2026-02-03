@@ -1,18 +1,22 @@
 import { HarmonicaTab } from '@/types/harmonica';
+import { Collection } from '@/types/collection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreVertical, Pencil, Trash2, FolderInput } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
 
 interface HarmonicaTabCardProps {
   tab: HarmonicaTab;
   onEdit: (tab: HarmonicaTab) => void;
   onDelete: (id: string) => void;
+  collections?: Collection[];
+  onMove?: (collectionId: string | null) => void;
 }
 
-export function HarmonicaTabCard({ tab, onEdit, onDelete }: HarmonicaTabCardProps) {
+export function HarmonicaTabCard({ tab, onEdit, onDelete, collections, onMove }: HarmonicaTabCardProps) {
   const noteCount = tab.content.lines.reduce((sum, line) => sum + line.notes.length, 0);
   const lineCount = tab.content.lines.length;
 
@@ -40,6 +44,24 @@ export function HarmonicaTabCard({ tab, onEdit, onDelete }: HarmonicaTabCardProp
                 <Pencil className="w-4 h-4 mr-2" />
                 Редактировать
               </DropdownMenuItem>
+              {collections && onMove && collections.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <MoveToCollectionDialog
+                    collections={collections}
+                    currentCollectionId={tab.collection_id}
+                    onMove={onMove}
+                    itemName={tab.title}
+                    trigger={
+                      <DropdownMenuItem onClick={(e) => e.stopPropagation()} onSelect={(e) => e.preventDefault()}>
+                        <FolderInput className="w-4 h-4 mr-2" />
+                        Переместить
+                      </DropdownMenuItem>
+                    }
+                  />
+                </>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={(e) => { e.stopPropagation(); onDelete(tab.id); }}
                 className="text-destructive focus:text-destructive"
