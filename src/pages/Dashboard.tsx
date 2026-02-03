@@ -377,10 +377,10 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <CollectionExportImportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} onImport={handleImportCollection} />
-            <CreateCollectionDialog onSubmit={handleCreateCollection} isLoading={createCollection.isPending} />
             <ImportSongDialog onImport={handleImportSong} onCreateEmpty={handleCreateEmptySong} isLoading={createSong.isPending} />
             <CreateHarmonicaTabDialog onSubmit={handleCreateHarmonicaTab} isLoading={createHarmonicaTab.isPending} />
+            <CreateCollectionDialog onSubmit={handleCreateCollection} isLoading={createCollection.isPending} />
+            <CollectionExportImportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} onImport={handleImportCollection} />
           </div>
         </div>
 
