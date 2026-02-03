@@ -40,12 +40,17 @@ export function useHarmonicaTabs(userId: string | undefined) {
   });
 
   const createHarmonicaTab = useMutation({
-    mutationFn: async ({ title, userId }: { title: string; userId: string }) => {
+    mutationFn: async ({ title, userId, collectionId }: { title: string; userId: string; collectionId?: string | null }) => {
       const initialContent: HarmonicaTabContent = { lines: [createEmptyHarmonicaLine()] };
       
       const { data, error } = await supabase
         .from('harmonica_tabs')
-        .insert([{ title, user_id: userId, content: initialContent as unknown as Json }])
+        .insert([{ 
+          title, 
+          user_id: userId, 
+          content: initialContent as unknown as Json,
+          collection_id: collectionId || null,
+        }])
         .select()
         .single();
       
@@ -61,10 +66,11 @@ export function useHarmonicaTabs(userId: string | undefined) {
   });
 
   const updateHarmonicaTab = useMutation({
-    mutationFn: async ({ id, title, content }: { id: string; title?: string; content?: HarmonicaTabContent }) => {
-      const updateData: { title?: string; content?: Json } = {};
+    mutationFn: async ({ id, title, content, collectionId }: { id: string; title?: string; content?: HarmonicaTabContent; collectionId?: string | null }) => {
+      const updateData: Record<string, unknown> = {};
       if (title !== undefined) updateData.title = title;
       if (content !== undefined) updateData.content = content as unknown as Json;
+      if (collectionId !== undefined) updateData.collection_id = collectionId;
 
       const { data, error } = await supabase
         .from('harmonica_tabs')

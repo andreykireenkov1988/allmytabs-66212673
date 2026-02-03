@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSongs } from '@/hooks/useSongs';
 import { useHarmonicaTabs } from '@/hooks/useHarmonicaTabs';
+import { useCollections } from '@/hooks/useCollections';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { Header } from '@/components/layout/Header';
 import { SongCard } from '@/components/song/SongCard';
@@ -12,12 +13,38 @@ import { CreateHarmonicaTabDialog } from '@/components/harmonica/CreateHarmonica
 import { EditHarmonicaTabView } from '@/components/harmonica/EditHarmonicaTabView';
 import { ContentTable } from '@/components/dashboard/ContentTable';
 import { ViewModeToggle, ViewMode } from '@/components/dashboard/ViewModeToggle';
-import { Song, ParsedSongData } from '@/types/song';
+import { CreateCollectionDialog } from '@/components/collection/CreateCollectionDialog';
+import { CollectionExportImportDialog } from '@/components/collection/CollectionExportImportDialog';
+import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
+import { Song, ParsedSongData, ChordsBlockContent } from '@/types/song';
 import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
+import { TablatureContent } from '@/types/tablature';
 import { toast } from 'sonner';
-import { Music, Loader2, Guitar, Wind, Search } from 'lucide-react';
+import { Music, Loader2, Guitar, Wind, Search, FolderOpen, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -38,12 +65,20 @@ export default function Dashboard() {
     deleteHarmonicaTab,
   } = useHarmonicaTabs(user?.id);
 
+  const {
+    collections,
+    isLoading: isLoadingCollections,
+    createCollection,
+    deleteCollection,
+  } = useCollections(user?.id);
+
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [editingHarmonicaTab, setEditingHarmonicaTab] = useState<HarmonicaTab | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('tiles');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value);
@@ -54,19 +89,61 @@ export default function Dashboard() {
     debouncedSetSearch(e.target.value);
   };
 
+  // Filter by collection and search
   const filteredSongs = useMemo(() => {
-    if (!searchQuery.trim()) return songs;
-    const query = searchQuery.toLowerCase().trim();
-    return songs.filter(song => song.title.toLowerCase().includes(query));
-  }, [songs, searchQuery]);
+    let result = songs;
+    
+    if (selectedCollectionId !== null) {
+      result = result.filter(song => song.collection_id === selectedCollectionId);
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(song => song.title.toLowerCase().includes(query));
+    }
+    
+    return result;
+  }, [songs, searchQuery, selectedCollectionId]);
 
   const filteredHarmonicaTabs = useMemo(() => {
-    if (!searchQuery.trim()) return harmonicaTabs;
-    const query = searchQuery.toLowerCase().trim();
-    return harmonicaTabs.filter(tab => tab.title.toLowerCase().includes(query));
-  }, [harmonicaTabs, searchQuery]);
+    let result = harmonicaTabs;
+    
+    if (selectedCollectionId !== null) {
+      result = result.filter(tab => tab.collection_id === selectedCollectionId);
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(tab => tab.title.toLowerCase().includes(query));
+    }
+    
+    return result;
+  }, [harmonicaTabs, searchQuery, selectedCollectionId]);
 
-  const isLoading = isLoadingSongs || isLoadingHarmonica;
+  const isLoading = isLoadingSongs || isLoadingHarmonica || isLoadingCollections;
+
+  // Handlers for collections
+  const handleCreateCollection = async (name: string) => {
+    if (!user) return;
+    try {
+      await createCollection.mutateAsync({ name, userId: user.id });
+      toast.success('Коллекция создана!');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка создания коллекции');
+    }
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    try {
+      await deleteCollection.mutateAsync(id);
+      if (selectedCollectionId === id) {
+        setSelectedCollectionId(null);
+      }
+      toast.success('Коллекция удалена');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка удаления');
+    }
+  };
 
   // Handlers for songs
   const handleImportSong = async (data: ParsedSongData) => {
@@ -78,6 +155,7 @@ export default function Dashboard() {
         content: data.content,
         sourceUrl: data.sourceUrl,
         userId: user.id,
+        collectionId: selectedCollectionId,
       });
       setEditingSong(newSong);
     } catch (error: any) {
@@ -91,6 +169,7 @@ export default function Dashboard() {
       const newSong = await createSong.mutateAsync({
         title: 'Новая песня',
         userId: user.id,
+        collectionId: selectedCollectionId,
       });
       setEditingSong(newSong);
     } catch (error: any) {
@@ -115,11 +194,24 @@ export default function Dashboard() {
     }
   };
 
+  const handleMoveSong = async (songId: string, collectionId: string | null) => {
+    try {
+      await updateSong.mutateAsync({ id: songId, collectionId });
+      toast.success('Перемещено!');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка перемещения');
+    }
+  };
+
   // Handlers for harmonica tabs
   const handleCreateHarmonicaTab = async (title: string) => {
     if (!user) return;
     try {
-      await createHarmonicaTab.mutateAsync({ title, userId: user.id });
+      await createHarmonicaTab.mutateAsync({ 
+        title, 
+        userId: user.id,
+        collectionId: selectedCollectionId,
+      });
       toast.success('Табулатура гармошки создана!');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка создания');
@@ -142,6 +234,90 @@ export default function Dashboard() {
     } catch (error: any) {
       toast.error(error.message || 'Ошибка удаления');
     }
+  };
+
+  const handleMoveHarmonicaTab = async (tabId: string, collectionId: string | null) => {
+    try {
+      await updateHarmonicaTab.mutateAsync({ id: tabId, collectionId });
+      toast.success('Перемещено!');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка перемещения');
+    }
+  };
+
+  // Import handler for collections
+  const handleImportCollection = async (
+    data: { 
+      songs: Array<{ title: string; artist: string | null; blocks: Array<{ block_type: string; title: string; content: unknown; position: number }> }>;
+      harmonicaTabs: Array<{ title: string; content: unknown }>;
+    },
+    targetCollectionId: string | null,
+    collectionName?: string
+  ) => {
+    if (!user) return;
+
+    let finalCollectionId = targetCollectionId;
+
+    // Create new collection if needed
+    if (collectionName) {
+      const newCollection = await createCollection.mutateAsync({ 
+        name: collectionName, 
+        userId: user.id 
+      });
+      finalCollectionId = newCollection.id;
+    }
+
+    // Import songs
+    for (const songData of data.songs || []) {
+      const { data: newSong, error: songError } = await supabase
+        .from('songs')
+        .insert([{
+          title: songData.title,
+          artist: songData.artist,
+          content: '',
+          user_id: user.id,
+          collection_id: finalCollectionId,
+        }])
+        .select()
+        .single();
+
+      if (songError) throw songError;
+
+      // Import blocks
+      if (songData.blocks && songData.blocks.length > 0) {
+        const blocksToInsert = songData.blocks.map(block => ({
+          song_id: newSong.id,
+          user_id: user.id,
+          block_type: block.block_type,
+          title: block.title || '',
+          content: block.content as Json,
+          position: block.position,
+        }));
+
+        const { error: blocksError } = await supabase
+          .from('song_blocks')
+          .insert(blocksToInsert);
+
+        if (blocksError) throw blocksError;
+      }
+    }
+
+    // Import harmonica tabs
+    for (const tabData of data.harmonicaTabs || []) {
+      const { error } = await supabase
+        .from('harmonica_tabs')
+        .insert([{
+          title: tabData.title,
+          content: tabData.content as Json,
+          user_id: user.id,
+          collection_id: finalCollectionId,
+        }]);
+
+      if (error) throw error;
+    }
+
+    // Refetch data
+    window.location.reload();
   };
 
   // Editing views
@@ -179,11 +355,13 @@ export default function Dashboard() {
 
   const totalCount = filteredSongs.length + filteredHarmonicaTabs.length;
   const isEmpty = songs.length === 0 && harmonicaTabs.length === 0;
-  const noResults = totalCount === 0 && searchQuery.trim() !== '';
+  const noResults = totalCount === 0 && (searchQuery.trim() !== '' || selectedCollectionId !== null);
 
   // Filter items based on active tab
   const showSongs = activeTab === 'all' || activeTab === 'songs';
   const showHarmonica = activeTab === 'all' || activeTab === 'harmonica';
+
+  const selectedCollection = collections.find(c => c.id === selectedCollectionId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -192,13 +370,23 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">
-              Моя коллекция
+              {selectedCollection ? selectedCollection.name : 'Моя коллекция'}
             </h1>
             <p className="text-muted-foreground">
-              {songs.length} гитара • {harmonicaTabs.length} гармошка
+              {filteredSongs.length} гитара • {filteredHarmonicaTabs.length} гармошка
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <CollectionExportImportDialog
+              songs={songs}
+              harmonicaTabs={harmonicaTabs}
+              collections={collections}
+              onImport={handleImportCollection}
+            />
+            <CreateCollectionDialog
+              onSubmit={handleCreateCollection}
+              isLoading={createCollection.isPending}
+            />
             <ImportSongDialog
               onImport={handleImportSong}
               onCreateEmpty={handleCreateEmptySong}
@@ -210,6 +398,54 @@ export default function Dashboard() {
             />
           </div>
         </div>
+
+        {/* Collections filter */}
+        {collections.length > 0 && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <FolderOpen className="w-4 h-4 text-muted-foreground" />
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={selectedCollectionId === null ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCollectionId(null)}
+              >
+                Все
+              </Button>
+              {collections.map(collection => (
+                <div key={collection.id} className="flex items-center gap-1">
+                  <Button
+                    variant={selectedCollectionId === collection.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCollectionId(collection.id)}
+                  >
+                    {collection.name}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удалить коллекцию?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Коллекция "{collection.name}" будет удалена. Карточки внутри коллекции останутся без коллекции.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteCollection(collection.id)}>
+                          Удалить
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -271,7 +507,10 @@ export default function Dashboard() {
             <TabsContent value={activeTab} className="mt-0">
               {noResults ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  Ничего не найдено по запросу «{searchQuery}»
+                  {searchQuery.trim() 
+                    ? `Ничего не найдено по запросу «${searchQuery}»`
+                    : 'В этой коллекции пока ничего нет'
+                  }
                 </div>
               ) : viewMode === 'tiles' ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -281,6 +520,8 @@ export default function Dashboard() {
                       song={song}
                       onEdit={setEditingSong}
                       onDelete={handleDeleteSong}
+                      collections={collections}
+                      onMove={(collectionId) => handleMoveSong(song.id, collectionId)}
                     />
                   ))}
                   {showHarmonica && filteredHarmonicaTabs.map((tab) => (
@@ -289,6 +530,8 @@ export default function Dashboard() {
                       tab={tab}
                       onEdit={setEditingHarmonicaTab}
                       onDelete={handleDeleteHarmonicaTab}
+                      collections={collections}
+                      onMove={(collectionId) => handleMoveHarmonicaTab(tab.id, collectionId)}
                     />
                   ))}
                 </div>

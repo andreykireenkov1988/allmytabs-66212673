@@ -14,9 +14,34 @@ export type Database = {
   }
   public: {
     Tables: {
+      collections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       harmonica_tabs: {
         Row: {
           artist: string | null
+          collection_id: string | null
           content: Json
           created_at: string
           id: string
@@ -26,6 +51,7 @@ export type Database = {
         }
         Insert: {
           artist?: string | null
+          collection_id?: string | null
           content?: Json
           created_at?: string
           id?: string
@@ -35,6 +61,7 @@ export type Database = {
         }
         Update: {
           artist?: string | null
+          collection_id?: string | null
           content?: Json
           created_at?: string
           id?: string
@@ -42,7 +69,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "harmonica_tabs_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       song_blocks: {
         Row: {
@@ -91,6 +126,7 @@ export type Database = {
       songs: {
         Row: {
           artist: string | null
+          collection_id: string | null
           content: string
           created_at: string
           id: string
@@ -101,6 +137,7 @@ export type Database = {
         }
         Insert: {
           artist?: string | null
+          collection_id?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -111,6 +148,7 @@ export type Database = {
         }
         Update: {
           artist?: string | null
+          collection_id?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -119,7 +157,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "songs_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tablatures: {
         Row: {

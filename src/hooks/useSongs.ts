@@ -115,13 +115,15 @@ export function useSongs(userId: string | undefined) {
       artist, 
       content, 
       sourceUrl, 
-      userId 
+      userId,
+      collectionId,
     }: { 
       title: string; 
       artist?: string; 
       content?: string; 
       sourceUrl?: string; 
       userId: string;
+      collectionId?: string | null;
     }) => {
       // Create the song
       const { data: song, error: songError } = await supabase
@@ -131,7 +133,8 @@ export function useSongs(userId: string | undefined) {
           artist: artist || null, 
           content: '', // Keep empty, content lives in blocks
           source_url: sourceUrl || null, 
-          user_id: userId 
+          user_id: userId,
+          collection_id: collectionId || null,
         }])
         .select()
         .single();
@@ -166,14 +169,17 @@ export function useSongs(userId: string | undefined) {
       id, 
       title, 
       artist,
+      collectionId,
     }: { 
       id: string; 
       title?: string; 
       artist?: string; 
+      collectionId?: string | null;
     }) => {
-      const updateData: Partial<Song> = {};
+      const updateData: Record<string, unknown> = {};
       if (title !== undefined) updateData.title = title;
       if (artist !== undefined) updateData.artist = artist;
+      if (collectionId !== undefined) updateData.collection_id = collectionId;
 
       const { data, error } = await supabase
         .from('songs')

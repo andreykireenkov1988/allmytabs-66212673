@@ -24,6 +24,7 @@ export interface HarmonicaTab {
   user_id: string;
   title: string;
   content: HarmonicaTabContent;
+  collection_id: string | null;
   created_at: string;
   updated_at: string;
 }

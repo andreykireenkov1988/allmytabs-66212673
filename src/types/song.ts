@@ -7,6 +7,7 @@ export interface Song {
   artist: string | null;
   content: string;
   source_url: string | null;
+  collection_id: string | null;
   created_at: string;
   updated_at: string;
   blocks?: SongBlock[];
