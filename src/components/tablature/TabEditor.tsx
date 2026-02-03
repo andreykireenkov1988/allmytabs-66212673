@@ -29,6 +29,7 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
   const [dragOverTarget, setDragOverTarget] = useState<{ lineId: string; stringIndex: number; position: number } | null>(null);
   const [shiftPressed, setShiftPressed] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<Selection[]>([]);
+  const [selectedConnection, setSelectedConnection] = useState<{ lineId: string; connectionId: string } | null>(null);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const CELL_WIDTH = 28;
   const CELL_HEIGHT = 24;
@@ -194,6 +195,21 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
     updateLine(lineId, {
       connections: line.connections?.filter((c) => c.id !== connectionId) || []
     });
+    setSelectedConnection(null);
+  };
+
+  const handleConnectionClick = (lineId: string, connectionId: string) => {
+    if (selectedConnection?.connectionId === connectionId) {
+      setSelectedConnection(null);
+    } else {
+      setSelectedConnection({ lineId, connectionId });
+    }
+  };
+
+  const deleteSelectedConnection = () => {
+    if (selectedConnection) {
+      removeConnection(selectedConnection.lineId, selectedConnection.connectionId);
+    }
   };
 
   // Keyboard navigation handler
@@ -353,6 +369,17 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                   Сбросить
                 </Button>
               )}
+              {selectedConnection && selectedConnection.lineId === line.id && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={deleteSelectedConnection}
+                  className="h-8"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Удалить связь
+                </Button>
+              )}
               <ConnectionControls 
                 onAddConnection={addConnection}
                 disabled={!canAddConnection}
@@ -364,28 +391,6 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
               )}
             </div>
           </div>
-
-          {/* Connections list */}
-          {line.connections && line.connections.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-3">
-              {line.connections.map((conn) => (
-                <div 
-                  key={conn.id}
-                  className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded"
-                >
-                  <span>
-                    {conn.type === 'hammer-on' ? '⌒' : conn.type === 'pull-off' ? '⌓' : conn.type === 'slide' ? '/' : '↗'} {STRING_NAMES[conn.stringIndex]}: {conn.startPosition + 1}→{conn.endPosition + 1}
-                  </span>
-                  <button
-                    onClick={() => removeConnection(line.id, conn.id)}
-                    className="text-muted-foreground hover:text-destructive ml-1"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Tab grid */}
           <div className="inline-block min-w-full">
@@ -402,6 +407,8 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                     stringIndex={stringIndex}
                     cellWidth={CELL_WIDTH}
                     cellHeight={CELL_HEIGHT}
+                    selectedConnectionId={selectedConnection?.lineId === line.id ? selectedConnection.connectionId : null}
+                    onConnectionClick={(connId) => handleConnectionClick(line.id, connId)}
                   />
                   
                   {/* Fret inputs */}
