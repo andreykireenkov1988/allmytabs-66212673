@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      songs: {
+        Row: {
+          artist: string | null
+          content: string
+          created_at: string
+          id: string
+          source_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artist?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          source_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artist?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          source_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tablatures: {
         Row: {
           content: Json
