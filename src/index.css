@@ -84,8 +84,8 @@
 
   .tab-fret-input {
     @apply bg-transparent text-fret-number font-mono text-sm font-semibold 
-           w-6 h-6 text-center focus:outline-none focus:ring-1 focus:ring-primary rounded
-           placeholder:text-muted-foreground/30;
+           h-6 text-center focus:outline-none focus:ring-1 focus:ring-primary rounded
+           placeholder:text-muted-foreground/30 transition-colors;
   }
 
   .tab-container {

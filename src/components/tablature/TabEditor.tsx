@@ -1,8 +1,10 @@
 import { useState, useCallback, DragEvent, KeyboardEvent, useRef } from 'react';
-import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, createEmptyLine } from '@/types/tablature';
-import { Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
+import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, TablatureConnection, ConnectionType, createEmptyLine, createConnection } from '@/types/tablature';
+import { Plus, Minus, GripVertical, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConnectionRenderer } from './ConnectionRenderer';
+import { ConnectionControls } from './ConnectionControls';
 
 interface TabEditorProps {
   content: TablatureContent;
@@ -16,11 +18,20 @@ interface DragData {
   fret: string;
 }
 
+interface Selection {
+  lineId: string;
+  stringIndex: number;
+  position: number;
+}
+
 export function TabEditor({ content, onChange }: TabEditorProps) {
   const [dragData, setDragData] = useState<DragData | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{ lineId: string; stringIndex: number; position: number } | null>(null);
   const [shiftPressed, setShiftPressed] = useState(false);
+  const [selectedNotes, setSelectedNotes] = useState<Selection[]>([]);
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const CELL_WIDTH = 28;
+  const CELL_HEIGHT = 24;
 
   const getInputKey = (lineId: string, stringIndex: number, position: number) =>
     `${lineId}-${stringIndex}-${position}`;
@@ -109,6 +120,80 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
     if (line) {
       updateLine(lineId, { columns: Math.max(8, line.columns - 8) });
     }
+  };
+
+  // Selection handlers for connections
+  const isSelected = (lineId: string, stringIndex: number, position: number) => {
+    return selectedNotes.some(
+      (s) => s.lineId === lineId && s.stringIndex === stringIndex && s.position === position
+    );
+  };
+
+  const toggleSelection = (lineId: string, stringIndex: number, position: number, fret: string) => {
+    if (!fret) return; // Only select cells with notes
+    
+    const existing = selectedNotes.find(
+      (s) => s.lineId === lineId && s.stringIndex === stringIndex && s.position === position
+    );
+    
+    if (existing) {
+      setSelectedNotes(selectedNotes.filter((s) => s !== existing));
+    } else {
+      // Only allow selecting 2 notes max, and they must be on the same string
+      if (selectedNotes.length === 0) {
+        setSelectedNotes([{ lineId, stringIndex, position }]);
+      } else if (selectedNotes.length === 1) {
+        const first = selectedNotes[0];
+        // Must be same line and same string
+        if (first.lineId === lineId && first.stringIndex === stringIndex && first.position !== position) {
+          setSelectedNotes([first, { lineId, stringIndex, position }]);
+        } else if (first.lineId !== lineId || first.stringIndex !== stringIndex) {
+          // Start fresh selection if different line/string
+          setSelectedNotes([{ lineId, stringIndex, position }]);
+        }
+      } else {
+        // Start new selection
+        setSelectedNotes([{ lineId, stringIndex, position }]);
+      }
+    }
+  };
+
+  const clearSelection = () => setSelectedNotes([]);
+
+  const canAddConnection = selectedNotes.length === 2;
+
+  const addConnection = (type: ConnectionType) => {
+    if (!canAddConnection) return;
+    
+    const [first, second] = selectedNotes;
+    const startPos = Math.min(first.position, second.position);
+    const endPos = Math.max(first.position, second.position);
+    
+    const line = content.lines.find((l) => l.id === first.lineId);
+    if (!line) return;
+    
+    // Check if connection already exists
+    const exists = line.connections?.some(
+      (c) => c.stringIndex === first.stringIndex && c.startPosition === startPos && c.endPosition === endPos
+    );
+    
+    if (!exists) {
+      const newConnection = createConnection(type, first.stringIndex, startPos, endPos);
+      updateLine(first.lineId, { 
+        connections: [...(line.connections || []), newConnection] 
+      });
+    }
+    
+    clearSelection();
+  };
+
+  const removeConnection = (lineId: string, connectionId: string) => {
+    const line = content.lines.find((l) => l.id === lineId);
+    if (!line) return;
+    
+    updateLine(lineId, {
+      connections: line.connections?.filter((c) => c.id !== connectionId) || []
+    });
   };
 
   // Keyboard navigation handler
@@ -232,8 +317,8 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
             )}
           </div>
 
-          {/* Column controls */}
-          <div className="flex items-center gap-2 mb-4">
+          {/* Column controls and connection controls */}
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -255,16 +340,69 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
             <span className="text-sm text-muted-foreground ml-2">
               {line.columns} позиций
             </span>
+            
+            <div className="ml-auto flex items-center gap-2">
+              {selectedNotes.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="h-8 text-muted-foreground"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Сбросить
+                </Button>
+              )}
+              <ConnectionControls 
+                onAddConnection={addConnection}
+                disabled={!canAddConnection}
+              />
+              {selectedNotes.length === 1 && (
+                <span className="text-xs text-muted-foreground">
+                  Ctrl+клик на вторую ноту
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Connections list */}
+          {line.connections && line.connections.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {line.connections.map((conn) => (
+                <div 
+                  key={conn.id}
+                  className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded"
+                >
+                  <span>
+                    {conn.type === 'hammer-on' ? '⌒' : '/'} {STRING_NAMES[conn.stringIndex]}: {conn.startPosition + 1}→{conn.endPosition + 1}
+                  </span>
+                  <button
+                    onClick={() => removeConnection(line.id, conn.id)}
+                    className="text-muted-foreground hover:text-destructive ml-1"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Tab grid */}
           <div className="inline-block min-w-full">
             {STRING_NAMES.map((stringName, stringIndex) => (
               <div key={stringIndex} className="flex items-center gap-0 mb-1">
                 <span className="string-label">{stringName}</span>
-                <div className="flex-1 relative flex items-center">
+                <div className="flex-1 relative flex items-center" style={{ height: CELL_HEIGHT }}>
                   {/* String line */}
                   <div className="absolute left-0 right-0 h-px bg-string-line" />
+                  
+                  {/* Connection renderer */}
+                  <ConnectionRenderer 
+                    connections={line.connections || []}
+                    stringIndex={stringIndex}
+                    cellWidth={CELL_WIDTH}
+                    cellHeight={CELL_HEIGHT}
+                  />
                   
                   {/* Fret inputs */}
                   <div className="flex relative z-10">
@@ -274,6 +412,7 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                         dragOverTarget?.lineId === line.id &&
                         dragOverTarget?.stringIndex === stringIndex &&
                         dragOverTarget?.position === position;
+                      const isNoteSelected = isSelected(line.id, stringIndex, position);
                       
                       return (
                         <input
@@ -293,6 +432,12 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                             setNoteAt(line.id, stringIndex, position, e.target.value)
                           }
                           onKeyDown={(e) => handleKeyDown(e, line.id, stringIndex, position)}
+                          onClick={(e) => {
+                            if (e.ctrlKey || e.metaKey) {
+                              e.preventDefault();
+                              toggleSelection(line.id, stringIndex, position, fretValue);
+                            }
+                          }}
                           draggable={!!fretValue}
                           onDragStart={(e) => handleDragStart(e, line.id, stringIndex, position, fretValue)}
                           onDragOver={(e) => handleDragOver(e, line.id, stringIndex, position)}
@@ -301,7 +446,8 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                           onDragEnd={handleDragEnd}
                           className={`tab-fret-input ${fretValue ? 'cursor-grab active:cursor-grabbing' : ''} ${
                             isDragOver ? 'ring-2 ring-primary bg-primary/20' : ''
-                          }`}
+                          } ${isNoteSelected ? 'ring-2 ring-accent bg-accent/30' : ''}`}
+                          style={{ width: CELL_WIDTH }}
                           placeholder="-"
                         />
                       );

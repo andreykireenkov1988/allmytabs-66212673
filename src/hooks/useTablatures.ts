@@ -21,6 +21,7 @@ const migrateContent = (content: unknown): TablatureContent => {
         id: crypto.randomUUID(),
         title: '',
         notes: content,
+        connections: [],
         columns: Math.max(16, ...content.map((n: { position: number }) => n.position + 4)),
       }],
     };
