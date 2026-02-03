@@ -374,7 +374,7 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                   className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded"
                 >
                   <span>
-                    {conn.type === 'hammer-on' ? '⌒' : '/'} {STRING_NAMES[conn.stringIndex]}: {conn.startPosition + 1}→{conn.endPosition + 1}
+                    {conn.type === 'hammer-on' ? '⌒' : conn.type === 'pull-off' ? '⌓' : conn.type === 'slide' ? '/' : '↗'} {STRING_NAMES[conn.stringIndex]}: {conn.startPosition + 1}→{conn.endPosition + 1}
                   </span>
                   <button
                     onClick={() => removeConnection(line.id, conn.id)}

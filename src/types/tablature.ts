@@ -4,7 +4,7 @@ export interface TablatureNote {
   fret: string; // can be number, letter, or symbol
 }
 
-export type ConnectionType = 'hammer-on' | 'slide';
+export type ConnectionType = 'hammer-on' | 'pull-off' | 'slide' | 'bend';
 
 export interface TablatureConnection {
   id: string;

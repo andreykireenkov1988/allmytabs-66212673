@@ -37,10 +37,28 @@ export function ConnectionControls({ onAddConnection, disabled }: ConnectionCont
             variant="ghost"
             size="sm"
             className="justify-start h-9"
+            onClick={() => onAddConnection('pull-off')}
+          >
+            <span className="mr-2">⌓</span>
+            Pull-Off
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-9"
             onClick={() => onAddConnection('slide')}
           >
             <span className="mr-2">/</span>
             Slide
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-9"
+            onClick={() => onAddConnection('bend')}
+          >
+            <span className="mr-2">↗</span>
+            Bend
           </Button>
         </div>
       </PopoverContent>
