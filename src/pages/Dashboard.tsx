@@ -6,6 +6,7 @@ import { useCollections } from '@/hooks/useCollections';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { SongCard } from '@/components/song/SongCard';
 import { ImportSongDialog } from '@/components/song/ImportSongDialog';
 import { UnifiedSongEditor } from '@/components/song/UnifiedSongEditor';
@@ -349,19 +350,35 @@ export default function Dashboard() {
 
   // Editing views
   if (editingSong) {
+    const songCollection = collections.find(c => c.id === editingSong.collection_id);
+    const breadcrumbItems = [
+      { label: 'Все табы', onClick: () => setEditingSong(null) },
+      ...(songCollection ? [{ label: songCollection.name, onClick: () => { setEditingSong(null); setSelectedCollectionId(songCollection.id); } }] : []),
+      { label: editingSong.title }
+    ];
+    
     return <div className="min-h-screen bg-background flex flex-col">
         <Header />
         <main className="container mx-auto px-4 py-8 flex-1">
+          <Breadcrumbs items={breadcrumbItems} />
           <UnifiedSongEditor song={editingSong} onBack={() => setEditingSong(null)} onSaveSong={handleSaveSong} isSaving={updateSong.isPending} />
         </main>
         <Footer />
       </div>;
   }
   if (editingHarmonicaTab) {
+    const tabCollection = collections.find(c => c.id === editingHarmonicaTab.collection_id);
+    const breadcrumbItems = [
+      { label: 'Все табы', onClick: () => setEditingHarmonicaTab(null) },
+      ...(tabCollection ? [{ label: tabCollection.name, onClick: () => { setEditingHarmonicaTab(null); setSelectedCollectionId(tabCollection.id); } }] : []),
+      { label: editingHarmonicaTab.title }
+    ];
+    
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
         <main className="container mx-auto px-4 py-8 flex-1">
+          <Breadcrumbs items={breadcrumbItems} />
           <EditHarmonicaTabView
             tab={editingHarmonicaTab}
             onBack={() => setEditingHarmonicaTab(null)}
