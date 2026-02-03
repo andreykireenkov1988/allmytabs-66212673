@@ -73,32 +73,32 @@ export function EditHarmonicaTabView({
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
           <Button
-            variant={isViewMode ? "default" : "outline"}
+            variant={isViewMode ? "default" : "ghost"}
             size="sm"
             onClick={() => setIsViewMode(true)}
-            className="gap-2"
+            className={`gap-2 ${isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
           >
             <Eye className="w-4 h-4" />
             Просмотр
           </Button>
           <Button
-            variant={!isViewMode ? "default" : "outline"}
+            variant={!isViewMode ? "default" : "ghost"}
             size="sm"
             onClick={() => setIsViewMode(false)}
-            className="gap-2"
+            className={`gap-2 ${!isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
           >
             <Pencil className="w-4 h-4" />
             Редактор
           </Button>
-          {(isSaving || isSavingState) && (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Сохранение...
-            </div>
-          )}
         </div>
+        {(isSaving || isSavingState) && (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Сохранение...
+          </div>
+        )}
       </div>
 
       {isViewMode ? (
