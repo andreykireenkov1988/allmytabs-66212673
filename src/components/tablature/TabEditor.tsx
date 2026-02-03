@@ -1,4 +1,4 @@
-import { useState, useCallback, DragEvent } from 'react';
+import { useState, useCallback, DragEvent, KeyboardEvent, useRef } from 'react';
 import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, createEmptyLine } from '@/types/tablature';
 import { Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,19 @@ interface DragData {
 export function TabEditor({ content, onChange }: TabEditorProps) {
   const [dragData, setDragData] = useState<DragData | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{ lineId: string; stringIndex: number; position: number } | null>(null);
+  const [shiftPressed, setShiftPressed] = useState(false);
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  const getInputKey = (lineId: string, stringIndex: number, position: number) =>
+    `${lineId}-${stringIndex}-${position}`;
+
+  const focusInput = (lineId: string, stringIndex: number, position: number) => {
+    const key = getInputKey(lineId, stringIndex, position);
+    const input = inputRefs.current.get(key);
+    if (input) {
+      input.focus();
+    }
+  };
 
   const updateLine = useCallback(
     (lineId: string, updates: Partial<TablatureLine>) => {
@@ -98,6 +111,45 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
     }
   };
 
+  // Keyboard navigation handler
+  const handleKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    lineId: string,
+    stringIndex: number,
+    position: number
+  ) => {
+    const lineIndex = content.lines.findIndex((l) => l.id === lineId);
+    const line = content.lines[lineIndex];
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (stringIndex > 0) {
+        focusInput(lineId, stringIndex - 1, position);
+      } else if (lineIndex > 0) {
+        // Move to last string of previous line
+        const prevLine = content.lines[lineIndex - 1];
+        const newPos = Math.min(position, prevLine.columns - 1);
+        focusInput(prevLine.id, 5, newPos);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (stringIndex < 5) {
+        focusInput(lineId, stringIndex + 1, position);
+      } else if (lineIndex < content.lines.length - 1) {
+        // Move to first string of next line
+        const nextLine = content.lines[lineIndex + 1];
+        const newPos = Math.min(position, nextLine.columns - 1);
+        focusInput(nextLine.id, 0, newPos);
+      }
+    } else if (e.key === 'ArrowLeft' && position > 0) {
+      e.preventDefault();
+      focusInput(lineId, stringIndex, position - 1);
+    } else if (e.key === 'ArrowRight' && position < line.columns - 1) {
+      e.preventDefault();
+      focusInput(lineId, stringIndex, position + 1);
+    }
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: DragEvent<HTMLInputElement>, lineId: string, stringIndex: number, position: number, fret: string) => {
     if (!fret) {
@@ -105,13 +157,15 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
       return;
     }
     setDragData({ lineId, stringIndex, position, fret });
-    e.dataTransfer.effectAllowed = 'move';
+    setShiftPressed(e.shiftKey);
+    e.dataTransfer.effectAllowed = 'copyMove';
     e.dataTransfer.setData('text/plain', fret);
   };
 
   const handleDragOver = (e: DragEvent<HTMLInputElement>, lineId: string, stringIndex: number, position: number) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    setShiftPressed(e.shiftKey);
+    e.dataTransfer.dropEffect = e.shiftKey ? 'move' : 'copy';
     setDragOverTarget({ lineId, stringIndex, position });
   };
 
@@ -135,18 +189,22 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
       return;
     }
 
-    // Remove from source position
-    setNoteAt(dragData.lineId, dragData.stringIndex, dragData.position, '');
+    // With Shift: move (remove from source). Without Shift: copy (keep source)
+    if (e.shiftKey) {
+      setNoteAt(dragData.lineId, dragData.stringIndex, dragData.position, '');
+    }
     
     // Add to target position
     setNoteAt(targetLineId, targetStringIndex, targetPosition, dragData.fret);
     
     setDragData(null);
+    setShiftPressed(false);
   };
 
   const handleDragEnd = () => {
     setDragData(null);
     setDragOverTarget(null);
+    setShiftPressed(false);
   };
 
   return (
@@ -220,12 +278,21 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                       return (
                         <input
                           key={position}
+                          ref={(el) => {
+                            const key = getInputKey(line.id, stringIndex, position);
+                            if (el) {
+                              inputRefs.current.set(key, el);
+                            } else {
+                              inputRefs.current.delete(key);
+                            }
+                          }}
                           type="text"
                           maxLength={3}
                           value={fretValue}
                           onChange={(e) =>
                             setNoteAt(line.id, stringIndex, position, e.target.value)
                           }
+                          onKeyDown={(e) => handleKeyDown(e, line.id, stringIndex, position)}
                           draggable={!!fretValue}
                           onDragStart={(e) => handleDragStart(e, line.id, stringIndex, position, fretValue)}
                           onDragOver={(e) => handleDragOver(e, line.id, stringIndex, position)}

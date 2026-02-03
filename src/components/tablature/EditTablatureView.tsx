@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Tablature, TablatureContent, createEmptyLine } from '@/types/tablature';
 import { TabEditor } from './TabEditor';
+import { ExportImportDialog } from './ExportImportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Save, Check } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useDebouncedCallback } from '@/hooks/useDebounce';
 
 interface EditTablatureViewProps {
   tablature: Tablature;
@@ -20,32 +22,46 @@ export function EditTablatureView({
 }: EditTablatureViewProps) {
   const [title, setTitle] = useState(tablature.title);
   const [content, setContent] = useState<TablatureContent>(() => {
-    // Ensure content has at least one line
     if (!tablature.content?.lines?.length) {
       return { lines: [createEmptyLine()] };
     }
     return tablature.content;
   });
-  const [hasChanges, setHasChanges] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isSavingState, setIsSavingState] = useState(false);
+  const initialLoad = useRef(true);
+
+  // Debounced auto-save function
+  const debouncedSave = useDebouncedCallback((id: string, t: string, c: TablatureContent) => {
+    onSave(id, t, c);
+    setIsSavingState(false);
+  }, 1000);
 
   useEffect(() => {
+    // Skip auto-save on initial load
+    if (initialLoad.current) {
+      initialLoad.current = false;
+      return;
+    }
+
     const titleChanged = title !== tablature.title;
     const contentChanged =
       JSON.stringify(content) !== JSON.stringify(tablature.content);
-    setHasChanges(titleChanged || contentChanged);
-  }, [title, content, tablature]);
 
-  const handleSave = () => {
-    onSave(tablature.id, title, content);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (titleChanged || contentChanged) {
+      setIsSavingState(true);
+      debouncedSave(tablature.id, title, content);
+    }
+  }, [title, content, tablature, debouncedSave]);
+
+  const handleImport = (importedTitle: string, importedContent: TablatureContent) => {
+    setTitle(importedTitle);
+    setContent(importedContent);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <Button
             variant="ghost"
             size="icon"
@@ -62,27 +78,19 @@ export function EditTablatureView({
           />
         </div>
 
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || isSaving}
-          className={`gap-2 transition-all ${
-            saved
-              ? 'bg-green-600 hover:bg-green-600'
-              : 'bg-primary hover:bg-primary/90'
-          } text-primary-foreground`}
-        >
-          {saved ? (
-            <>
-              <Check className="w-4 h-4" />
-              Сохранено
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Сохранить
-            </>
+        <div className="flex items-center gap-3">
+          {(isSaving || isSavingState) && (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Сохранение...
+            </div>
           )}
-        </Button>
+          <ExportImportDialog
+            title={title}
+            content={content}
+            onImport={handleImport}
+          />
+        </div>
       </div>
 
       <TabEditor content={content} onChange={setContent} />
@@ -94,7 +102,8 @@ export function EditTablatureView({
         <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Кликните на позицию струны и введите номер лада</li>
           <li>• Можно вводить цифры (0-24), буквы (h, p, b) и символы (/)</li>
-          <li>• <strong>Перетаскивайте</strong> введённые ноты мышкой на другие позиции</li>
+          <li>• <strong>Перетаскивание:</strong> копирует ноту, с <strong>Shift</strong> — переносит</li>
+          <li>• <strong>Стрелки ↑↓</strong> — навигация между струнами</li>
           <li>• Используйте кнопки "Больше/Меньше" для изменения длины строки</li>
           <li>• Добавляйте новые строки для куплетов, припевов и т.д.</li>
           <li>• E - самая толстая струна (бас), e - самая тонкая</li>
