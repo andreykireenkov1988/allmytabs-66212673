@@ -58,7 +58,7 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
   const [artist, setArtist] = useState(song.artist || '');
   const [blocks, setBlocks] = useState<SongBlock[]>(song.blocks || []);
   const [isSavingState, setIsSavingState] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(true);
   const [transpose, setTranspose] = useState(0);
   const [useFlats, setUseFlats] = useState(false);
 

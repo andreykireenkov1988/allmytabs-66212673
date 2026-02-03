@@ -28,7 +28,7 @@ export function EditHarmonicaTabView({
     return tab.content;
   });
   const [isSavingState, setIsSavingState] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(true);
   const initialLoad = useRef(true);
 
   // Debounced auto-save function
