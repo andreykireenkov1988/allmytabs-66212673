@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSongs } from '@/hooks/useSongs';
 import { useHarmonicaTabs } from '@/hooks/useHarmonicaTabs';
@@ -14,10 +14,8 @@ import { ViewModeToggle, ViewMode } from '@/components/dashboard/ViewModeToggle'
 import { Song, ParsedSongData } from '@/types/song';
 import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
 import { toast } from 'sonner';
-import { Music, Loader2, Guitar, Wind, Search, X } from 'lucide-react';
+import { Music, Loader2, Guitar, Wind } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -42,7 +40,6 @@ export default function Dashboard() {
   const [editingHarmonicaTab, setEditingHarmonicaTab] = useState<HarmonicaTab | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('tiles');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const isLoading = isLoadingSongs || isLoadingHarmonica;
 
@@ -162,27 +159,6 @@ export default function Dashboard() {
   const showSongs = activeTab === 'all' || activeTab === 'songs';
   const showHarmonica = activeTab === 'all' || activeTab === 'harmonica';
 
-  // Filter by search query
-  const filteredSongs = useMemo(() => {
-    if (!searchQuery.trim()) return songs;
-    const query = searchQuery.toLowerCase();
-    return songs.filter(
-      (song) =>
-        song.title.toLowerCase().includes(query) ||
-        song.artist?.toLowerCase().includes(query)
-    );
-  }, [songs, searchQuery]);
-
-  const filteredHarmonicaTabs = useMemo(() => {
-    if (!searchQuery.trim()) return harmonicaTabs;
-    const query = searchQuery.toLowerCase();
-    return harmonicaTabs.filter((tab) =>
-      tab.title.toLowerCase().includes(query)
-    );
-  }, [harmonicaTabs, searchQuery]);
-
-  const filteredTotalCount = filteredSongs.length + filteredHarmonicaTabs.length;
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -253,40 +229,13 @@ export default function Dashboard() {
                   Гармошка ({harmonicaTabs.length})
                 </TabsTrigger>
               </TabsList>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Поиск..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-9 w-48 md:w-64"
-                  />
-                  {searchQuery && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              </div>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
 
             <TabsContent value={activeTab} className="mt-0">
-              {filteredTotalCount === 0 && searchQuery ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    Ничего не найдено по запросу «{searchQuery}»
-                  </p>
-                </div>
-              ) : viewMode === 'tiles' ? (
+              {viewMode === 'tiles' ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {showSongs && filteredSongs.map((song) => (
+                  {showSongs && songs.map((song) => (
                     <SongCard
                       key={song.id}
                       song={song}
@@ -294,7 +243,7 @@ export default function Dashboard() {
                       onDelete={handleDeleteSong}
                     />
                   ))}
-                  {showHarmonica && filteredHarmonicaTabs.map((tab) => (
+                  {showHarmonica && harmonicaTabs.map((tab) => (
                     <HarmonicaTabCard
                       key={tab.id}
                       tab={tab}
@@ -306,8 +255,8 @@ export default function Dashboard() {
               ) : (
                 <ContentTable
                   tablatures={[]}
-                  harmonicaTabs={filteredHarmonicaTabs}
-                  songs={filteredSongs}
+                  harmonicaTabs={harmonicaTabs}
+                  songs={songs}
                   showTabs={false}
                   showHarmonica={showHarmonica}
                   showSongs={showSongs}
