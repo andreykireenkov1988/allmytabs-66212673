@@ -61,9 +61,10 @@ export function useHarmonicaTabs(userId: string | undefined) {
   });
 
   const updateHarmonicaTab = useMutation({
-    mutationFn: async ({ id, title, content }: { id: string; title?: string; content?: HarmonicaTabContent }) => {
-      const updateData: { title?: string; content?: Json } = {};
+    mutationFn: async ({ id, title, artist, content }: { id: string; title?: string; artist?: string | null; content?: HarmonicaTabContent }) => {
+      const updateData: { title?: string; artist?: string | null; content?: Json } = {};
       if (title !== undefined) updateData.title = title;
+      if (artist !== undefined) updateData.artist = artist;
       if (content !== undefined) updateData.content = content as unknown as Json;
 
       const { data, error } = await supabase

@@ -1,12 +1,10 @@
 import { Tablature } from '@/types/tablature';
-import { Song, isChordsContent, isTablatureContent } from '@/types/song';
+import { Song } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2, Guitar, Wind, Music2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { MoreVertical, Pencil, Trash2, Wind, Music2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ContentTableProps {
@@ -77,21 +75,10 @@ export function ContentTable({
 
   const getSubtitle = (item: ContentItem): string => {
     switch (item.type) {
-      case 'harmonica': {
-        const lineCount = item.data.content?.lines?.length || 0;
-        const noteCount = item.data.content?.lines?.reduce((sum, line) => sum + line.notes.length, 0) || 0;
-        return `${lineCount} строк • ${noteCount} нот`;
-      }
-      case 'song': {
-        const blocks = item.data.blocks || [];
-        const hasChords = blocks.some(b => b.block_type === 'chords');
-        const hasTabs = blocks.some(b => b.block_type === 'tablature');
-        const parts = [];
-        if (item.data.artist) parts.push(item.data.artist);
-        if (hasChords) parts.push('Аккорды');
-        if (hasTabs) parts.push(`${blocks.filter(b => b.block_type === 'tablature').length} табов`);
-        return parts.join(' • ') || 'Пустая песня';
-      }
+      case 'harmonica':
+        return item.data.artist || '';
+      case 'song':
+        return item.data.artist || '';
     }
   };
 
@@ -124,8 +111,7 @@ export function ContentTable({
           <TableRow>
             <TableHead className="w-[100px]">Тип</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead className="hidden md:table-cell">Детали</TableHead>
-            <TableHead className="hidden sm:table-cell">Обновлено</TableHead>
+            <TableHead className="hidden md:table-cell">Исполнитель</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -147,9 +133,6 @@ export function ContentTable({
               </TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground">
                 {getSubtitle(item)}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                {formatDistanceToNow(new Date(item.data.updated_at), { addSuffix: true, locale: ru })}
               </TableCell>
               <TableCell>
                 <DropdownMenu>
