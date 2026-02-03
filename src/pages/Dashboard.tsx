@@ -376,9 +376,6 @@ export default function Dashboard() {
             <CreateCollectionDialog onSubmit={handleCreateCollection} isLoading={createCollection.isPending} />
             <CollectionExportImportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} onImport={handleImportCollection} />
           </div>
-          <p className="text-muted-foreground text-sm">
-            {filteredSongs.length} гитара • {filteredHarmonicaTabs.length} гармошка
-          </p>
         </div>
 
         {/* Collections filter */}
