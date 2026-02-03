@@ -356,12 +356,7 @@ export default function Dashboard() {
       </div>;
   }
   if (editingHarmonicaTab) {
-    return <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
-          <EditHarmonicaTabView tab={editingHarmonicaTab} onBack={() => setEditingHarmonicaTab(null)} onSave={handleSaveHarmonicaTab} isSaving={updateHarmonicaTab.isPending} />
-        </main>
-      </div>;
+    return;
   }
   const totalCount = filteredSongs.length + filteredHarmonicaTabs.length;
   const isEmpty = songs.length === 0 && harmonicaTabs.length === 0;
