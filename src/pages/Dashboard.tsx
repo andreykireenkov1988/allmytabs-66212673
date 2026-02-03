@@ -13,6 +13,8 @@ import { SongEditor } from '@/components/song/SongEditor';
 import { HarmonicaTabCard } from '@/components/harmonica/HarmonicaTabCard';
 import { CreateHarmonicaTabDialog } from '@/components/harmonica/CreateHarmonicaTabDialog';
 import { EditHarmonicaTabView } from '@/components/harmonica/EditHarmonicaTabView';
+import { ContentTable } from '@/components/dashboard/ContentTable';
+import { ViewModeToggle, ViewMode } from '@/components/dashboard/ViewModeToggle';
 import { Tablature, TablatureContent } from '@/types/tablature';
 import { Song, ParsedSongData } from '@/types/song';
 import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
@@ -50,6 +52,7 @@ export default function Dashboard() {
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [editingHarmonicaTab, setEditingHarmonicaTab] = useState<HarmonicaTab | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('tiles');
 
   const isLoading = isLoadingTabs || isLoadingSongs || isLoadingHarmonica;
 
@@ -279,27 +282,31 @@ export default function Dashboard() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-6 flex-wrap h-auto">
-              <TabsTrigger value="all" className="gap-2">
-                <Music className="w-4 h-4" />
-                Все ({totalCount})
-              </TabsTrigger>
-              <TabsTrigger value="tabs" className="gap-2">
-                <Guitar className="w-4 h-4" />
-                Гитара ({tablatures.length})
-              </TabsTrigger>
-              <TabsTrigger value="harmonica" className="gap-2">
-                <Wind className="w-4 h-4" />
-                Гармошка ({harmonicaTabs.length})
-              </TabsTrigger>
-              <TabsTrigger value="songs" className="gap-2">
-                <Music2 className="w-4 h-4" />
-                Песни ({songs.length})
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+              <TabsList className="flex-wrap h-auto">
+                <TabsTrigger value="all" className="gap-2">
+                  <Music className="w-4 h-4" />
+                  Все ({totalCount})
+                </TabsTrigger>
+                <TabsTrigger value="tabs" className="gap-2">
+                  <Guitar className="w-4 h-4" />
+                  Гитара ({tablatures.length})
+                </TabsTrigger>
+                <TabsTrigger value="harmonica" className="gap-2">
+                  <Wind className="w-4 h-4" />
+                  Гармошка ({harmonicaTabs.length})
+                </TabsTrigger>
+                <TabsTrigger value="songs" className="gap-2">
+                  <Music2 className="w-4 h-4" />
+                  Песни ({songs.length})
+                </TabsTrigger>
+              </TabsList>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            </div>
 
             <TabsContent value={activeTab} className="mt-0">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {viewMode === 'tiles' ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {showTabs && tablatures.map((tab) => (
                   <TablatureCard
                     key={tab.id}
@@ -324,7 +331,23 @@ export default function Dashboard() {
                     onDelete={handleDeleteSong}
                   />
                 ))}
-              </div>
+                </div>
+              ) : (
+                <ContentTable
+                  tablatures={tablatures}
+                  harmonicaTabs={harmonicaTabs}
+                  songs={songs}
+                  showTabs={showTabs}
+                  showHarmonica={showHarmonica}
+                  showSongs={showSongs}
+                  onEditTab={setEditingTab}
+                  onDeleteTab={handleDeleteTab}
+                  onEditHarmonicaTab={setEditingHarmonicaTab}
+                  onDeleteHarmonicaTab={handleDeleteHarmonicaTab}
+                  onEditSong={setEditingSong}
+                  onDeleteSong={handleDeleteSong}
+                />
+              )}
             </TabsContent>
           </Tabs>
         )}
