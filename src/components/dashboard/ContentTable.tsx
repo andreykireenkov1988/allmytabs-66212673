@@ -149,8 +149,6 @@ export function ContentTable({
           <TableRow>
             <TableHead className="w-[100px]">Тип</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead className="hidden md:table-cell">Детали</TableHead>
-            <TableHead className="hidden sm:table-cell">Обновлено</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -169,12 +167,6 @@ export function ContentTable({
               </TableCell>
               <TableCell className="font-medium">
                 {item.data.title}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">
-                {getSubtitle(item)}
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                {formatDistanceToNow(new Date(item.data.updated_at), { addSuffix: true, locale: ru })}
               </TableCell>
               <TableCell>
                 <DropdownMenu>
