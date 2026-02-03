@@ -4,10 +4,21 @@ export interface TablatureNote {
   fret: string; // can be number, letter, or symbol
 }
 
+export type ConnectionType = 'hammer-on' | 'slide';
+
+export interface TablatureConnection {
+  id: string;
+  type: ConnectionType;
+  stringIndex: number;
+  startPosition: number;
+  endPosition: number;
+}
+
 export interface TablatureLine {
   id: string;
   title: string;
   notes: TablatureNote[];
+  connections: TablatureConnection[];
   columns: number;
 }
 
@@ -31,5 +42,19 @@ export const createEmptyLine = (): TablatureLine => ({
   id: crypto.randomUUID(),
   title: '',
   notes: [],
+  connections: [],
   columns: 16,
+});
+
+export const createConnection = (
+  type: ConnectionType,
+  stringIndex: number,
+  startPosition: number,
+  endPosition: number
+): TablatureConnection => ({
+  id: crypto.randomUUID(),
+  type,
+  stringIndex,
+  startPosition,
+  endPosition,
 });
