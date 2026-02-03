@@ -25,8 +25,9 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
   const [open, setOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedAscii, setCopiedAscii] = useState(false);
 
-  const exportToText = (): string => {
+  const exportToMarkdown = (): string => {
     const lines: string[] = [];
     lines.push(`# ${title}`);
     lines.push('');
@@ -55,6 +56,42 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
       });
 
       lines.push('```');
+      lines.push('');
+    });
+
+    return lines.join('\n');
+  };
+
+  const exportToAscii = (): string => {
+    const lines: string[] = [];
+    lines.push(title);
+    lines.push('='.repeat(Math.max(title.length, 40)));
+    lines.push('');
+
+    content.lines.forEach((line, lineIndex) => {
+      if (line.title) {
+        lines.push(`[${line.title}]`);
+      } else if (content.lines.length > 1) {
+        lines.push(`[Часть ${lineIndex + 1}]`);
+      }
+
+      STRING_NAMES.forEach((stringName, stringIndex) => {
+        let tabLine = `${stringName}|`;
+        for (let pos = 0; pos < line.columns; pos++) {
+          const note = line.notes.find(
+            (n) => n.stringIndex === stringIndex && n.position === pos
+          );
+          if (note?.fret) {
+            const fret = note.fret.padEnd(2, '-');
+            tabLine += fret;
+          } else {
+            tabLine += '--';
+          }
+        }
+        tabLine += '|';
+        lines.push(tabLine);
+      });
+
       lines.push('');
     });
 
@@ -142,16 +179,24 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
     }
   };
 
-  const handleCopy = async () => {
-    const text = exportToText();
+  const handleCopyMarkdown = async () => {
+    const text = exportToMarkdown();
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success('Табулатура скопирована в буфер обмена');
+    toast.success('Markdown скопирован в буфер обмена');
   };
 
-  const handleDownload = () => {
-    const text = exportToText();
+  const handleCopyAscii = async () => {
+    const text = exportToAscii();
+    await navigator.clipboard.writeText(text);
+    setCopiedAscii(true);
+    setTimeout(() => setCopiedAscii(false), 2000);
+    toast.success('ASCII табулатура скопирована в буфер обмена');
+  };
+
+  const handleDownloadMarkdown = () => {
+    const text = exportToMarkdown();
     const blob = new Blob([text], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -159,7 +204,19 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
     a.download = `${title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Файл загружен');
+    toast.success('Файл .md загружен');
+  };
+
+  const handleDownloadTxt = () => {
+    const text = exportToAscii();
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Файл .txt загружен');
   };
 
   const handleImport = () => {
@@ -186,7 +243,8 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
     }
   };
 
-  const exportText = exportToText();
+  const markdownText = exportToMarkdown();
+  const asciiText = exportToAscii();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -196,7 +254,7 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
           Экспорт/Импорт
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Экспорт и импорт табулатуры</DialogTitle>
           <DialogDescription>
@@ -204,11 +262,15 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="export">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="export" className="gap-2">
+        <Tabs defaultValue="ascii">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="ascii" className="gap-2">
+              <Copy className="w-4 h-4" />
+              ASCII
+            </TabsTrigger>
+            <TabsTrigger value="markdown" className="gap-2">
               <Download className="w-4 h-4" />
-              Экспорт
+              Markdown
             </TabsTrigger>
             <TabsTrigger value="import" className="gap-2">
               <Upload className="w-4 h-4" />
@@ -216,18 +278,42 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="export" className="space-y-4">
+          <TabsContent value="ascii" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Чистый текстовый формат для копирования на форумы, в чаты и соцсети
+            </p>
             <Textarea
-              value={exportText}
+              value={asciiText}
               readOnly
               className="font-mono text-xs h-64 resize-none"
             />
             <div className="flex gap-2">
-              <Button onClick={handleCopy} variant="outline" className="gap-2">
+              <Button onClick={handleCopyAscii} variant="outline" className="gap-2">
+                {copiedAscii ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedAscii ? 'Скопировано' : 'Копировать'}
+              </Button>
+              <Button onClick={handleDownloadTxt} variant="secondary" className="gap-2">
+                <Download className="w-4 h-4" />
+                Скачать .txt
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="markdown" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Формат с разметкой для GitHub, Notion и других платформ
+            </p>
+            <Textarea
+              value={markdownText}
+              readOnly
+              className="font-mono text-xs h-64 resize-none"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleCopyMarkdown} variant="outline" className="gap-2">
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Скопировано' : 'Копировать'}
               </Button>
-              <Button onClick={handleDownload} className="gap-2">
+              <Button onClick={handleDownloadMarkdown} className="gap-2">
                 <Download className="w-4 h-4" />
                 Скачать .md
               </Button>
