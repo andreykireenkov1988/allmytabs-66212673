@@ -12,8 +12,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { TablatureContent, TablatureLine, STRING_NAMES, createEmptyLine } from '@/types/tablature';
+import { TablatureContent, TablatureLine, TablatureConnection, ConnectionType, STRING_NAMES, createEmptyLine, createConnection } from '@/types/tablature';
 import { toast } from 'sonner';
+
+// Connection type symbols for export/import
+const CONNECTION_SYMBOLS: Record<ConnectionType, string> = {
+  'hammer-on': 'h',
+  'pull-off': 'p',
+  'slide': '/',
+  'bend': 'b',
+};
+
+const SYMBOL_TO_CONNECTION: Record<string, ConnectionType> = {
+  'h': 'hammer-on',
+  'p': 'pull-off',
+  '/': 'slide',
+  'b': 'bend',
+};
 
 interface ExportImportDialogProps {
   title: string;
@@ -27,6 +42,14 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
   const [copied, setCopied] = useState(false);
   const [copiedAscii, setCopiedAscii] = useState(false);
 
+  const serializeConnections = (connections: TablatureConnection[]): string => {
+    if (!connections || connections.length === 0) return '';
+    
+    return connections.map(c => 
+      `${c.stringIndex}:${c.startPosition}-${c.endPosition}${CONNECTION_SYMBOLS[c.type]}`
+    ).join(',');
+  };
+
   const exportToMarkdown = (): string => {
     const lines: string[] = [];
     lines.push(`# ${title}`);
@@ -36,6 +59,12 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
       if (line.title) {
         lines.push(`## ${line.title}`);
       }
+      
+      // Export connections as a comment
+      if (line.connections && line.connections.length > 0) {
+        lines.push(`<!-- connections: ${serializeConnections(line.connections)} -->`);
+      }
+      
       lines.push('```tab');
 
       STRING_NAMES.forEach((stringName, stringIndex) => {
@@ -74,6 +103,11 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
       } else if (content.lines.length > 1) {
         lines.push(`[Часть ${lineIndex + 1}]`);
       }
+      
+      // Export connections in ASCII format
+      if (line.connections && line.connections.length > 0) {
+        lines.push(`# connections: ${serializeConnections(line.connections)}`);
+      }
 
       STRING_NAMES.forEach((stringName, stringIndex) => {
         let tabLine = `${stringName}|`;
@@ -98,11 +132,36 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
     return lines.join('\n');
   };
 
-  const parseTabBlock = (tabBlockLines: string[], lineTitle: string): TablatureLine | null => {
+  const parseConnections = (connectionsStr: string): TablatureConnection[] => {
+    if (!connectionsStr) return [];
+    
+    const connections: TablatureConnection[] = [];
+    const parts = connectionsStr.split(',');
+    
+    for (const part of parts) {
+      // Format: stringIndex:startPos-endPosType (e.g., "0:2-4h")
+      const match = part.trim().match(/^(\d+):(\d+)-(\d+)([hpb\/])$/);
+      if (match) {
+        const stringIndex = parseInt(match[1], 10);
+        const startPosition = parseInt(match[2], 10);
+        const endPosition = parseInt(match[3], 10);
+        const type = SYMBOL_TO_CONNECTION[match[4]];
+        
+        if (type) {
+          connections.push(createConnection(type, stringIndex, startPosition, endPosition));
+        }
+      }
+    }
+    
+    return connections;
+  };
+
+  const parseTabBlock = (tabBlockLines: string[], lineTitle: string, connections: TablatureConnection[] = []): TablatureLine | null => {
     if (tabBlockLines.length !== 6) return null;
     
     const newLine = createEmptyLine();
     newLine.title = lineTitle;
+    newLine.connections = connections;
     let maxPos = 0;
 
     tabBlockLines.forEach((tabLine, stringIndex) => {
@@ -151,6 +210,7 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
       const tablatureLines: TablatureContent['lines'] = [];
 
       let currentLineTitle = '';
+      let currentConnections: TablatureConnection[] = [];
       let inTabBlock = false;
       let tabBlockLines: string[] = [];
 
@@ -163,13 +223,23 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
           parsedTitle = trimmed.substring(2).trim();
         } 
         // ASCII format: Title followed by === separator
-        else if (i === 0 && trimmed && !isTabLine(trimmed) && !trimmed.startsWith('[')) {
+        else if (i === 0 && trimmed && !isTabLine(trimmed) && !trimmed.startsWith('[') && !trimmed.startsWith('#')) {
           // Check if next non-empty line is a separator
           let nextIdx = i + 1;
           while (nextIdx < lines.length && !lines[nextIdx].trim()) nextIdx++;
           if (nextIdx < lines.length && /^[=\-]{3,}$/.test(lines[nextIdx].trim())) {
             parsedTitle = trimmed;
           }
+        }
+        // Markdown connections comment: <!-- connections: ... -->
+        else if (trimmed.startsWith('<!-- connections:') && trimmed.endsWith('-->')) {
+          const connectionsStr = trimmed.slice(17, -3).trim();
+          currentConnections = parseConnections(connectionsStr);
+        }
+        // ASCII connections comment: # connections: ...
+        else if (trimmed.startsWith('# connections:')) {
+          const connectionsStr = trimmed.slice(14).trim();
+          currentConnections = parseConnections(connectionsStr);
         }
         // Markdown section: ## Section Name
         else if (trimmed.startsWith('## ')) {
@@ -187,10 +257,11 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
         // Markdown tab block end
         else if (trimmed === '```' && inTabBlock) {
           inTabBlock = false;
-          const parsed = parseTabBlock(tabBlockLines, currentLineTitle);
+          const parsed = parseTabBlock(tabBlockLines, currentLineTitle, currentConnections);
           if (parsed) {
             tablatureLines.push(parsed);
             currentLineTitle = '';
+            currentConnections = [];
           }
         }
         // Inside markdown tab block
@@ -217,10 +288,11 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
           }
           
           if (tabBlockLines.length === 6) {
-            const parsed = parseTabBlock(tabBlockLines, currentLineTitle);
+            const parsed = parseTabBlock(tabBlockLines, currentLineTitle, currentConnections);
             if (parsed) {
               tablatureLines.push(parsed);
               currentLineTitle = '';
+              currentConnections = [];
             }
             i = j - 1; // Skip processed lines
           }
