@@ -1,7 +1,8 @@
-import { Song } from '@/types/song';
+import { Song, isChordsContent, isTablatureContent } from '@/types/song';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Music2, Trash2, ExternalLink } from 'lucide-react';
+import { Music2, Trash2, ExternalLink, Guitar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,12 +22,22 @@ interface SongCardProps {
 }
 
 export function SongCard({ song, onEdit, onDelete }: SongCardProps) {
-  // Get first few lines for preview
-  const preview = song.content
-    .split('\n')
-    .filter(line => line.trim())
-    .slice(0, 4)
-    .join('\n');
+  const blocks = song.blocks || [];
+  
+  // Get preview from first chords block
+  const chordsBlock = blocks.find(b => b.block_type === 'chords');
+  const tabBlocks = blocks.filter(b => b.block_type === 'tablature');
+  
+  const preview = chordsBlock && isChordsContent(chordsBlock.content)
+    ? chordsBlock.content.text
+        .split('\n')
+        .filter(line => line.trim())
+        .slice(0, 4)
+        .join('\n')
+    : '';
+
+  const hasChords = blocks.some(b => b.block_type === 'chords');
+  const hasTabs = blocks.some(b => b.block_type === 'tablature');
 
   return (
     <Card 
@@ -93,9 +104,41 @@ export function SongCard({ song, onEdit, onDelete }: SongCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap line-clamp-4 bg-muted/30 p-2 rounded">
-          {preview || 'Пустая песня'}
-        </pre>
+        {/* Block badges */}
+        <div className="flex gap-1 mb-2 flex-wrap">
+          {hasChords && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Music2 className="w-3 h-3" />
+              Аккорды
+            </Badge>
+          )}
+          {hasTabs && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              <Guitar className="w-3 h-3" />
+              {tabBlocks.length} таб{tabBlocks.length === 1 ? '' : tabBlocks.length < 5 ? 'а' : 'ов'}
+            </Badge>
+          )}
+          {blocks.length === 0 && (
+            <Badge variant="outline" className="text-xs">
+              Пустая
+            </Badge>
+          )}
+        </div>
+        
+        {preview ? (
+          <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap line-clamp-4 bg-muted/30 p-2 rounded">
+            {preview}
+          </pre>
+        ) : hasTabs ? (
+          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+            Табулатура для гитары
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+            Нет содержимого
+          </div>
+        )}
+        
         <p className="text-xs text-muted-foreground mt-2">
           {new Date(song.updated_at).toLocaleDateString('ru-RU')}
         </p>

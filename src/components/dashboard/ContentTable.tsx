@@ -1,5 +1,5 @@
 import { Tablature } from '@/types/tablature';
-import { Song } from '@/types/song';
+import { Song, isChordsContent, isTablatureContent } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -25,19 +25,14 @@ interface ContentTableProps {
 }
 
 type ContentItem = 
-  | { type: 'tablature'; data: Tablature }
   | { type: 'harmonica'; data: HarmonicaTab }
   | { type: 'song'; data: Song };
 
 export function ContentTable({
-  tablatures,
   harmonicaTabs,
   songs,
-  showTabs,
   showHarmonica,
   showSongs,
-  onEditTab,
-  onDeleteTab,
   onEditHarmonicaTab,
   onDeleteHarmonicaTab,
   onEditSong,
@@ -45,7 +40,6 @@ export function ContentTable({
 }: ContentTableProps) {
   // Combine all items into a single list sorted by updated_at
   const allItems: ContentItem[] = [
-    ...(showTabs ? tablatures.map((t) => ({ type: 'tablature' as const, data: t })) : []),
     ...(showHarmonica ? harmonicaTabs.map((t) => ({ type: 'harmonica' as const, data: t })) : []),
     ...(showSongs ? songs.map((s) => ({ type: 'song' as const, data: s })) : []),
   ].sort((a, b) => new Date(b.data.updated_at).getTime() - new Date(a.data.updated_at).getTime());
@@ -56,8 +50,6 @@ export function ContentTable({
 
   const getTypeIcon = (type: ContentItem['type']) => {
     switch (type) {
-      case 'tablature':
-        return <Guitar className="w-4 h-4" />;
       case 'harmonica':
         return <Wind className="w-4 h-4" />;
       case 'song':
@@ -67,8 +59,6 @@ export function ContentTable({
 
   const getTypeLabel = (type: ContentItem['type']) => {
     switch (type) {
-      case 'tablature':
-        return 'Гитара';
       case 'harmonica':
         return 'Гармошка';
       case 'song':
@@ -78,37 +68,35 @@ export function ContentTable({
 
   const getTypeVariant = (type: ContentItem['type']): 'default' | 'secondary' | 'outline' => {
     switch (type) {
-      case 'tablature':
-        return 'default';
       case 'harmonica':
         return 'secondary';
       case 'song':
-        return 'outline';
+        return 'default';
     }
   };
 
   const getSubtitle = (item: ContentItem): string => {
     switch (item.type) {
-      case 'tablature': {
-        const lineCount = item.data.content?.lines?.length || 0;
-        return `${lineCount} ${lineCount === 1 ? 'строка' : lineCount < 5 ? 'строки' : 'строк'}`;
-      }
       case 'harmonica': {
         const lineCount = item.data.content?.lines?.length || 0;
         const noteCount = item.data.content?.lines?.reduce((sum, line) => sum + line.notes.length, 0) || 0;
         return `${lineCount} строк • ${noteCount} нот`;
       }
       case 'song': {
-        return item.data.artist || 'Без исполнителя';
+        const blocks = item.data.blocks || [];
+        const hasChords = blocks.some(b => b.block_type === 'chords');
+        const hasTabs = blocks.some(b => b.block_type === 'tablature');
+        const parts = [];
+        if (item.data.artist) parts.push(item.data.artist);
+        if (hasChords) parts.push('Аккорды');
+        if (hasTabs) parts.push(`${blocks.filter(b => b.block_type === 'tablature').length} табов`);
+        return parts.join(' • ') || 'Пустая песня';
       }
     }
   };
 
   const handleEdit = (item: ContentItem) => {
     switch (item.type) {
-      case 'tablature':
-        onEditTab(item.data);
-        break;
       case 'harmonica':
         onEditHarmonicaTab(item.data);
         break;
@@ -120,9 +108,6 @@ export function ContentTable({
 
   const handleDelete = (item: ContentItem) => {
     switch (item.type) {
-      case 'tablature':
-        onDeleteTab(item.data.id);
-        break;
       case 'harmonica':
         onDeleteHarmonicaTab(item.data.id);
         break;
