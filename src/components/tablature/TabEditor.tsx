@@ -1,10 +1,11 @@
 import { useState, useCallback, DragEvent, KeyboardEvent, useRef } from 'react';
 import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, TablatureConnection, ConnectionType, createEmptyLine, createConnection } from '@/types/tablature';
-import { Plus, Minus, GripVertical, Trash2, X } from 'lucide-react';
+import { Plus, Minus, GripVertical, Trash2, X, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConnectionRenderer } from './ConnectionRenderer';
 import { ConnectionControls } from './ConnectionControls';
+import { RecognizeTabsDialog } from './RecognizeTabsDialog';
 
 interface TabEditorProps {
   content: TablatureContent;
@@ -511,15 +512,33 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
         </div>
       ))}
 
-      {/* Add line button */}
-      <Button
-        variant="outline"
-        onClick={addLine}
-        className="w-full border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-primary/50"
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        Добавить новую строку
-      </Button>
+      {/* Bottom actions */}
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          onClick={addLine}
+          className="flex-1 border-dashed border-2 h-12 text-muted-foreground hover:text-foreground hover:border-primary/50"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Добавить новую строку
+        </Button>
+        <RecognizeTabsDialog
+          onRecognized={(lines) => {
+            onChange({
+              lines: [...content.lines, ...lines],
+            });
+          }}
+          trigger={
+            <Button
+              variant="outline"
+              className="h-12 border-dashed border-2 text-muted-foreground hover:text-foreground hover:border-primary/50"
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Распознать из картинки
+            </Button>
+          }
+        />
+      </div>
     </div>
   );
 }
