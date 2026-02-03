@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { TablatureContent, STRING_NAMES, createEmptyLine } from '@/types/tablature';
+import { TablatureContent, TablatureLine, STRING_NAMES, createEmptyLine } from '@/types/tablature';
 import { toast } from 'sonner';
 
 interface ExportImportDialogProps {
@@ -98,6 +98,52 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
     return lines.join('\n');
   };
 
+  const parseTabBlock = (tabBlockLines: string[], lineTitle: string): TablatureLine | null => {
+    if (tabBlockLines.length !== 6) return null;
+    
+    const newLine = createEmptyLine();
+    newLine.title = lineTitle;
+    let maxPos = 0;
+
+    tabBlockLines.forEach((tabLine, stringIndex) => {
+      // Remove string name and pipes: e|--3-5-|
+      const match = tabLine.match(/^[a-zA-Z]\|(.*)\|?$/);
+      if (match) {
+        const frets = match[1];
+        let pos = 0;
+        let i = 0;
+
+        while (i < frets.length) {
+          let fret = '';
+          // Read up to 2 characters (or until we hit end)
+          while (fret.length < 2 && i < frets.length) {
+            fret += frets[i];
+            i++;
+          }
+
+          const cleanFret = fret.replace(/-/g, '').trim();
+          if (cleanFret) {
+            newLine.notes.push({
+              stringIndex,
+              position: pos,
+              fret: cleanFret,
+            });
+          }
+          pos++;
+          maxPos = Math.max(maxPos, pos);
+        }
+      }
+    });
+
+    newLine.columns = Math.max(16, maxPos);
+    return newLine;
+  };
+
+  const isTabLine = (line: string): boolean => {
+    // Check if line looks like a tab line: e|--3-5-| or E|--3-5--|
+    return /^[eEbBgGdDaA]\|.*\|?$/.test(line.trim());
+  };
+
   const parseImportText = (text: string): { title: string; content: TablatureContent } | null => {
     try {
       const lines = text.split('\n');
@@ -108,61 +154,81 @@ export function ExportImportDialog({ title, content, onImport }: ExportImportDia
       let inTabBlock = false;
       let tabBlockLines: string[] = [];
 
-      for (const line of lines) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const trimmed = line.trim();
 
+        // Markdown format: # Title
         if (trimmed.startsWith('# ')) {
           parsedTitle = trimmed.substring(2).trim();
-        } else if (trimmed.startsWith('## ')) {
+        } 
+        // ASCII format: Title followed by === separator
+        else if (i === 0 && trimmed && !isTabLine(trimmed) && !trimmed.startsWith('[')) {
+          // Check if next non-empty line is a separator
+          let nextIdx = i + 1;
+          while (nextIdx < lines.length && !lines[nextIdx].trim()) nextIdx++;
+          if (nextIdx < lines.length && /^[=\-]{3,}$/.test(lines[nextIdx].trim())) {
+            parsedTitle = trimmed;
+          }
+        }
+        // Markdown section: ## Section Name
+        else if (trimmed.startsWith('## ')) {
           currentLineTitle = trimmed.substring(3).trim();
-        } else if (trimmed === '```tab') {
+        }
+        // ASCII section: [Section Name] or [Часть N]
+        else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          currentLineTitle = trimmed.slice(1, -1).trim();
+        }
+        // Markdown tab block start
+        else if (trimmed === '```tab') {
           inTabBlock = true;
           tabBlockLines = [];
-        } else if (trimmed === '```' && inTabBlock) {
+        }
+        // Markdown tab block end
+        else if (trimmed === '```' && inTabBlock) {
           inTabBlock = false;
-
-          if (tabBlockLines.length === 6) {
-            const newLine = createEmptyLine();
-            newLine.title = currentLineTitle;
+          const parsed = parseTabBlock(tabBlockLines, currentLineTitle);
+          if (parsed) {
+            tablatureLines.push(parsed);
             currentLineTitle = '';
-
-            let maxPos = 0;
-
-            tabBlockLines.forEach((tabLine, stringIndex) => {
-              // Remove string name and pipes: e|--3-5-|
-              const match = tabLine.match(/^[a-zA-Z]\|(.*)\|?$/);
-              if (match) {
-                const frets = match[1];
-                let pos = 0;
-                let i = 0;
-
-                while (i < frets.length) {
-                  let fret = '';
-                  // Read up to 2 characters (or until we hit end)
-                  while (fret.length < 2 && i < frets.length) {
-                    fret += frets[i];
-                    i++;
-                  }
-
-                  const cleanFret = fret.replace(/-/g, '').trim();
-                  if (cleanFret) {
-                    newLine.notes.push({
-                      stringIndex,
-                      position: pos,
-                      fret: cleanFret,
-                    });
-                  }
-                  pos++;
-                  maxPos = Math.max(maxPos, pos);
-                }
-              }
-            });
-
-            newLine.columns = Math.max(16, maxPos);
-            tablatureLines.push(newLine);
           }
-        } else if (inTabBlock) {
+        }
+        // Inside markdown tab block
+        else if (inTabBlock) {
           tabBlockLines.push(trimmed);
+        }
+        // ASCII format: detect tab lines directly
+        else if (isTabLine(trimmed)) {
+          // Start collecting ASCII tab block
+          tabBlockLines = [trimmed];
+          
+          // Look ahead for the remaining 5 string lines
+          let j = i + 1;
+          while (j < lines.length && tabBlockLines.length < 6) {
+            const nextLine = lines[j].trim();
+            if (isTabLine(nextLine)) {
+              tabBlockLines.push(nextLine);
+              j++;
+            } else if (nextLine === '') {
+              j++;
+            } else {
+              break;
+            }
+          }
+          
+          if (tabBlockLines.length === 6) {
+            const parsed = parseTabBlock(tabBlockLines, currentLineTitle);
+            if (parsed) {
+              tablatureLines.push(parsed);
+              currentLineTitle = '';
+            }
+            i = j - 1; // Skip processed lines
+          }
+          tabBlockLines = [];
+        }
+        // Skip separator lines
+        else if (/^[=\-]{3,}$/.test(trimmed)) {
+          continue;
         }
       }
 
