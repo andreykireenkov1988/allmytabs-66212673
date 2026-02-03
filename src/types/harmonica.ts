@@ -50,19 +50,21 @@ export const createHarmonicaNote = (
   position,
 });
 
-// Format note for display: +1, -3, -3', -3'', etc.
+// Format note for display: 1, -3, -3', -3'', etc. (blow = just number, draw = minus)
 export const formatHarmonicaNote = (note: HarmonicaNote): string => {
-  const prefix = note.direction === 'blow' ? '+' : '-';
+  const prefix = note.direction === 'blow' ? '' : '-';
   const bendMarks = "'".repeat(note.bend);
   return `${prefix}${note.hole}${bendMarks}`;
 };
 
-// Parse note string to components: "+1" -> {hole: 1, direction: 'blow', bend: 0}
+// Parse note string to components: "1" or "+1" -> blow, "-3" -> draw
 export const parseHarmonicaNoteString = (str: string): { hole: number; direction: BreathDirection; bend: number } | null => {
-  const match = str.match(/^([+-])(\d+)('*)$/);
+  // Match: optional +, or -, followed by number and optional bends
+  const match = str.match(/^([+-]?)(\d+)('*)$/);
   if (!match) return null;
   
-  const direction: BreathDirection = match[1] === '+' ? 'blow' : 'draw';
+  // No prefix or + means blow, - means draw
+  const direction: BreathDirection = match[1] === '-' ? 'draw' : 'blow';
   const hole = parseInt(match[2], 10);
   const bend = match[3].length;
   

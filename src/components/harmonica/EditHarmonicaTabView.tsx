@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { HarmonicaTab, HarmonicaTabContent, createEmptyHarmonicaLine } from '@/types/harmonica';
 import { HarmonicaTabEditor } from './HarmonicaTabEditor';
+import { HarmonicaTabViewer } from './HarmonicaTabViewer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, Pencil } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 
 interface EditHarmonicaTabViewProps {
@@ -27,6 +28,7 @@ export function EditHarmonicaTabView({
     return tab.content;
   });
   const [isSavingState, setIsSavingState] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
   const initialLoad = useRef(true);
 
   // Debounced auto-save function
@@ -72,6 +74,24 @@ export function EditHarmonicaTabView({
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant={isViewMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsViewMode(true)}
+            className="gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            Просмотр
+          </Button>
+          <Button
+            variant={!isViewMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsViewMode(false)}
+            className="gap-2"
+          >
+            <Pencil className="w-4 h-4" />
+            Редактор
+          </Button>
           {(isSaving || isSavingState) && (
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -81,22 +101,30 @@ export function EditHarmonicaTabView({
         </div>
       </div>
 
-      <HarmonicaTabEditor content={content} onChange={setContent} />
+      {isViewMode ? (
+        <div className="glass-card p-6">
+          <HarmonicaTabViewer content={content} />
+        </div>
+      ) : (
+        <>
+          <HarmonicaTabEditor content={content} onChange={setContent} />
 
-      <div className="glass-card p-4">
-        <h4 className="text-sm font-semibold text-foreground mb-2">
-          Как пользоваться:
-        </h4>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• Кликните на ячейку и введите ноту с клавиатуры или выберите из меню</li>
-          <li>• <strong>+1</strong> — выдох (blow) в 1-е отверстие</li>
-          <li>• <strong>-4</strong> — вдох (draw) в 4-е отверстие</li>
-          <li>• <strong>-3'</strong> — бенд на полтона вниз</li>
-          <li>• <strong>-3''</strong> — бенд на тон вниз</li>
-          <li>• Стрелки ← → для навигации между ячейками</li>
-          <li>• Добавляйте новые строки для куплетов, припевов и т.д.</li>
-        </ul>
-      </div>
+          <div className="glass-card p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-2">
+              Как пользоваться:
+            </h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Кликните на ячейку и введите ноту с клавиатуры или выберите из меню</li>
+              <li>• <strong>1</strong> — выдох (blow) в 1-е отверстие</li>
+              <li>• <strong>-4</strong> — вдох (draw) в 4-е отверстие</li>
+              <li>• <strong>-3'</strong> — бенд на полтона вниз</li>
+              <li>• <strong>-3''</strong> — бенд на тон вниз</li>
+              <li>• Стрелки ← → для навигации между ячейками</li>
+              <li>• Добавляйте новые строки для куплетов, припевов и т.д.</li>
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

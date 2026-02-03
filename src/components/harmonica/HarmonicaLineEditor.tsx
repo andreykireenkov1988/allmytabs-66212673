@@ -208,7 +208,7 @@ export function HarmonicaLineEditor({
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
                 <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                  Выдох (+)
+                  Выдох
                 </div>
                 {HARMONICA_HOLES.map((hole) => (
                   <DropdownMenuItem
@@ -216,7 +216,7 @@ export function HarmonicaLineEditor({
                     onSelect={() => handleAddNoteFromMenu(position, hole, 'blow')}
                     className="font-mono cursor-pointer"
                   >
-                    +{hole}
+                    {hole}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
@@ -273,7 +273,7 @@ export function HarmonicaLineEditor({
                     onSelect={() => handleAddNoteFromMenu(position, hole, 'blow', 1)}
                     className="font-mono cursor-pointer"
                   >
-                    +{hole}'
+                    {hole}'
                   </DropdownMenuItem>
                 ))}
                 {note && (
@@ -295,7 +295,7 @@ export function HarmonicaLineEditor({
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground">
-        Кликните на ячейку и введите ноту (+1 для выдоха, -3 для вдоха, -3' для бенда) или выберите из меню
+        Кликните на ячейку и введите ноту (1 для выдоха, -3 для вдоха, -3' для бенда) или выберите из меню
       </p>
     </div>
   );
