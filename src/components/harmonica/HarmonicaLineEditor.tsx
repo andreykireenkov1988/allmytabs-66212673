@@ -107,12 +107,10 @@ export function HarmonicaLineEditor({
     }
   };
 
-  // Add note from dropdown
-  const handleAddNoteFromMenu = (hole: number, direction: BreathDirection, bend: number = 0) => {
-    if (selectedPosition === null) return;
-
-    const newNote = createHarmonicaNote(hole, direction, selectedPosition, bend);
-    const existingIndex = line.notes.findIndex((n) => n.position === selectedPosition);
+  // Add note from dropdown - pass position directly to avoid async state issues
+  const handleAddNoteFromMenu = (position: number, hole: number, direction: BreathDirection, bend: number = 0) => {
+    const newNote = createHarmonicaNote(hole, direction, position, bend);
+    const existingIndex = line.notes.findIndex((n) => n.position === position);
 
     if (existingIndex >= 0) {
       const newNotes = [...line.notes];
@@ -122,7 +120,15 @@ export function HarmonicaLineEditor({
       onChange({ ...line, notes: [...line.notes, newNote] });
     }
 
+    setSelectedPosition(position);
     setInputValue(formatHarmonicaNote(newNote));
+  };
+
+  // Delete note at position
+  const handleDeleteNote = (position: number) => {
+    const newNotes = line.notes.filter((n) => n.position !== position);
+    onChange({ ...line, notes: newNotes });
+    setInputValue('');
   };
 
   // Adjust columns
@@ -200,15 +206,15 @@ export function HarmonicaLineEditor({
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-80 overflow-y-auto">
+              <DropdownMenuContent className="max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
                 <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
                   Выдох (+)
                 </div>
                 {HARMONICA_HOLES.map((hole) => (
                   <DropdownMenuItem
                     key={`blow-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'blow')}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'blow')}
+                    className="font-mono cursor-pointer"
                   >
                     +{hole}
                   </DropdownMenuItem>
@@ -220,8 +226,8 @@ export function HarmonicaLineEditor({
                 {HARMONICA_HOLES.map((hole) => (
                   <DropdownMenuItem
                     key={`draw-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'draw')}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'draw')}
+                    className="font-mono cursor-pointer"
                   >
                     -{hole}
                   </DropdownMenuItem>
@@ -233,8 +239,8 @@ export function HarmonicaLineEditor({
                 {[1, 2, 3, 4, 5, 6].map((hole) => (
                   <DropdownMenuItem
                     key={`bend1-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'draw', 1)}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'draw', 1)}
+                    className="font-mono cursor-pointer"
                   >
                     -{hole}'
                   </DropdownMenuItem>
@@ -242,8 +248,8 @@ export function HarmonicaLineEditor({
                 {[2, 3].map((hole) => (
                   <DropdownMenuItem
                     key={`bend2-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'draw', 2)}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'draw', 2)}
+                    className="font-mono cursor-pointer"
                   >
                     -{hole}''
                   </DropdownMenuItem>
@@ -251,8 +257,8 @@ export function HarmonicaLineEditor({
                 {[3].map((hole) => (
                   <DropdownMenuItem
                     key={`bend3-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'draw', 3)}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'draw', 3)}
+                    className="font-mono cursor-pointer"
                   >
                     -{hole}'''
                   </DropdownMenuItem>
@@ -264,8 +270,8 @@ export function HarmonicaLineEditor({
                 {[8, 9, 10].map((hole) => (
                   <DropdownMenuItem
                     key={`overblow-${hole}`}
-                    onClick={() => handleAddNoteFromMenu(hole, 'blow', 1)}
-                    className="font-mono"
+                    onSelect={() => handleAddNoteFromMenu(position, hole, 'blow', 1)}
+                    className="font-mono cursor-pointer"
                   >
                     +{hole}'
                   </DropdownMenuItem>
@@ -274,12 +280,8 @@ export function HarmonicaLineEditor({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => {
-                        const newNotes = line.notes.filter((n) => n.position !== position);
-                        onChange({ ...line, notes: newNotes });
-                        setInputValue('');
-                      }}
-                      className="text-destructive focus:text-destructive"
+                      onSelect={() => handleDeleteNote(position)}
+                      className="text-destructive focus:text-destructive cursor-pointer"
                     >
                       Удалить ноту
                     </DropdownMenuItem>
