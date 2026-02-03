@@ -5,13 +5,13 @@ import { TablatureContent, TablatureLine, TablatureNote, TablatureConnection, Co
 // ============ EXPORT FUNCTIONS ============
 
 function formatTablatureLine(line: TablatureLine): string {
-  const { notes, connections, columns, title } = line;
+  const { notes, connections = [], columns, title } = line;
   
   // Build ASCII tab representation
   const grid: string[][] = STRING_NAMES.map(() => Array(columns).fill('-'));
   
   // Place notes
-  for (const note of notes) {
+  for (const note of notes || []) {
     if (note.stringIndex >= 0 && note.stringIndex < 6 && note.position >= 0 && note.position < columns) {
       grid[note.stringIndex][note.position] = note.fret;
     }
@@ -21,7 +21,7 @@ function formatTablatureLine(line: TablatureLine): string {
   const tabLines = STRING_NAMES.map((name, idx) => `${name}|${grid[idx].join('')}|`);
   
   // Format connections as comments
-  const connectionLines = connections.map(conn => 
+  const connectionLines = (connections || []).map(conn => 
     `<!-- connection: ${conn.type} string=${conn.stringIndex} from=${conn.startPosition} to=${conn.endPosition} -->`
   );
   
