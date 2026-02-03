@@ -60,6 +60,12 @@ export default function Dashboard() {
     return songs.filter(song => song.title.toLowerCase().includes(query));
   }, [songs, searchQuery]);
 
+  const filteredHarmonicaTabs = useMemo(() => {
+    if (!searchQuery.trim()) return harmonicaTabs;
+    const query = searchQuery.toLowerCase().trim();
+    return harmonicaTabs.filter(tab => tab.title.toLowerCase().includes(query));
+  }, [harmonicaTabs, searchQuery]);
+
   const isLoading = isLoadingSongs || isLoadingHarmonica;
 
   // Handlers for songs
@@ -171,7 +177,7 @@ export default function Dashboard() {
     );
   }
 
-  const totalCount = filteredSongs.length + harmonicaTabs.length;
+  const totalCount = filteredSongs.length + filteredHarmonicaTabs.length;
   const isEmpty = songs.length === 0 && harmonicaTabs.length === 0;
   const noResults = totalCount === 0 && searchQuery.trim() !== '';
 
@@ -189,7 +195,7 @@ export default function Dashboard() {
               Моя коллекция
             </h1>
             <p className="text-muted-foreground">
-              {songs.length} песен • {harmonicaTabs.length} табулатур гармошки
+              {songs.length} гитара • {harmonicaTabs.length} гармошка
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -242,11 +248,11 @@ export default function Dashboard() {
                 </TabsTrigger>
                 <TabsTrigger value="songs" className="gap-2">
                   <Guitar className="w-4 h-4" />
-                  Песни ({filteredSongs.length})
+                  Гитара ({filteredSongs.length})
                 </TabsTrigger>
                 <TabsTrigger value="harmonica" className="gap-2">
                   <Wind className="w-4 h-4" />
-                  Гармошка ({harmonicaTabs.length})
+                  Гармошка ({filteredHarmonicaTabs.length})
                 </TabsTrigger>
               </TabsList>
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
@@ -255,7 +261,7 @@ export default function Dashboard() {
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Поиск по названию песни..."
+                placeholder="Поиск по названию..."
                 value={searchInput}
                 onChange={handleSearchChange}
                 className="pl-10 max-w-sm"
@@ -277,7 +283,7 @@ export default function Dashboard() {
                       onDelete={handleDeleteSong}
                     />
                   ))}
-                  {showHarmonica && harmonicaTabs.map((tab) => (
+                  {showHarmonica && filteredHarmonicaTabs.map((tab) => (
                     <HarmonicaTabCard
                       key={tab.id}
                       tab={tab}
@@ -289,7 +295,7 @@ export default function Dashboard() {
               ) : (
                 <ContentTable
                   tablatures={[]}
-                  harmonicaTabs={harmonicaTabs}
+                  harmonicaTabs={filteredHarmonicaTabs}
                   songs={filteredSongs}
                   showTabs={false}
                   showHarmonica={showHarmonica}
