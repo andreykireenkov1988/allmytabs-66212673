@@ -437,7 +437,7 @@ export default function Dashboard() {
                   Гармошка ({filteredHarmonicaTabs.length})
                 </TabsTrigger>
               </TabsList>
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              
             </div>
 
             <div className="relative mb-6">
@@ -448,9 +448,6 @@ export default function Dashboard() {
             <TabsContent value={activeTab} className="mt-0">
               {noResults ? <div className="text-center py-12 text-muted-foreground">
                   {searchQuery.trim() ? `Ничего не найдено по запросу «${searchQuery}»` : 'В этой коллекции пока ничего нет'}
-                </div> : viewMode === 'tiles' ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {showSongs && filteredSongs.map(song => <SongCard key={song.id} song={song} onEdit={setEditingSong} onDelete={handleDeleteSong} collections={collections} onMove={collectionId => handleMoveSong(song.id, collectionId)} onGenerateImage={handleGenerateSongImage} isGeneratingImage={generatingSongId === song.id} />)}
-                  {showHarmonica && filteredHarmonicaTabs.map(tab => <HarmonicaTabCard key={tab.id} tab={tab} onEdit={setEditingHarmonicaTab} onDelete={handleDeleteHarmonicaTab} collections={collections} onMove={collectionId => handleMoveHarmonicaTab(tab.id, collectionId)} onGenerateImage={handleGenerateHarmonicaImage} isGeneratingImage={generatingHarmonicaId === tab.id} />)}
                 </div> : <ContentTable tablatures={[]} harmonicaTabs={filteredHarmonicaTabs} songs={filteredSongs} showTabs={false} showHarmonica={showHarmonica} showSongs={showSongs} onEditTab={() => {}} onDeleteTab={() => {}} onEditHarmonicaTab={setEditingHarmonicaTab} onDeleteHarmonicaTab={handleDeleteHarmonicaTab} onEditSong={setEditingSong} onDeleteSong={handleDeleteSong} collections={collections} onMoveSong={handleMoveSong} onMoveHarmonicaTab={handleMoveHarmonicaTab} />}
             </TabsContent>
           </Tabs>}
