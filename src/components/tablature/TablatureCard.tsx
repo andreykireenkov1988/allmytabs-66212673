@@ -13,12 +13,18 @@ interface TablatureCardProps {
 export function TablatureCard({ tablature, onEdit, onDelete }: TablatureCardProps) {
   const previewColumns = 12;
 
+  // Get the first line's notes for preview
+  const firstLine = tablature.content?.lines?.[0];
+  const notes = firstLine?.notes ?? [];
+
   const getNoteAt = (stringIndex: number, position: number): string => {
-    const note = tablature.content.find(
-      (n: any) => n.stringIndex === stringIndex && n.position === position
+    const note = notes.find(
+      (n) => n.stringIndex === stringIndex && n.position === position
     );
     return note?.fret ?? '-';
   };
+
+  const lineCount = tablature.content?.lines?.length ?? 0;
 
   return (
     <div className="glass-card p-5 group hover:border-primary/30 transition-all duration-300 animate-slide-up">
@@ -32,6 +38,7 @@ export function TablatureCard({ tablature, onEdit, onDelete }: TablatureCardProp
               {tablature.title}
             </h3>
             <p className="text-xs text-muted-foreground">
+              {lineCount} {lineCount === 1 ? 'строка' : lineCount < 5 ? 'строки' : 'строк'} •{' '}
               {formatDistanceToNow(new Date(tablature.updated_at), {
                 addSuffix: true,
                 locale: ru,

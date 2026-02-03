@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tablature, TablatureNote } from '@/types/tablature';
+import { Tablature, TablatureContent, createEmptyLine } from '@/types/tablature';
 import { TabEditor } from './TabEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { ArrowLeft, Save, Check } from 'lucide-react';
 interface EditTablatureViewProps {
   tablature: Tablature;
   onBack: () => void;
-  onSave: (id: string, title: string, content: TablatureNote[]) => void;
+  onSave: (id: string, title: string, content: TablatureContent) => void;
   isSaving?: boolean;
 }
 
@@ -19,9 +19,13 @@ export function EditTablatureView({
   isSaving,
 }: EditTablatureViewProps) {
   const [title, setTitle] = useState(tablature.title);
-  const [content, setContent] = useState<TablatureNote[]>(
-    (tablature.content as TablatureNote[]) || []
-  );
+  const [content, setContent] = useState<TablatureContent>(() => {
+    // Ensure content has at least one line
+    if (!tablature.content?.lines?.length) {
+      return { lines: [createEmptyLine()] };
+    }
+    return tablature.content;
+  });
   const [hasChanges, setHasChanges] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -90,7 +94,9 @@ export function EditTablatureView({
         <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Кликните на позицию струны и введите номер лада</li>
           <li>• Можно вводить цифры (0-24), буквы (h, p, b) и символы (/)</li>
-          <li>• Используйте кнопки "Больше/Меньше" для изменения длины</li>
+          <li>• <strong>Перетаскивайте</strong> введённые ноты мышкой на другие позиции</li>
+          <li>• Используйте кнопки "Больше/Меньше" для изменения длины строки</li>
+          <li>• Добавляйте новые строки для куплетов, припевов и т.д.</li>
           <li>• E - самая толстая струна (бас), e - самая тонкая</li>
         </ul>
       </div>

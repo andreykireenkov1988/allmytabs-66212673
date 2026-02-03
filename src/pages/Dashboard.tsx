@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { TablatureCard } from '@/components/tablature/TablatureCard';
 import { CreateTablatureDialog } from '@/components/tablature/CreateTablatureDialog';
 import { EditTablatureView } from '@/components/tablature/EditTablatureView';
-import { Tablature, TablatureNote } from '@/types/tablature';
+import { Tablature, TablatureContent } from '@/types/tablature';
 import { toast } from 'sonner';
 import { Music, Loader2 } from 'lucide-react';
 
@@ -31,7 +31,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleSave = async (id: string, title: string, content: TablatureNote[]) => {
+  const handleSave = async (id: string, title: string, content: TablatureContent) => {
     try {
       await updateTablature.mutateAsync({ id, title, content });
       toast.success('Сохранено!');
