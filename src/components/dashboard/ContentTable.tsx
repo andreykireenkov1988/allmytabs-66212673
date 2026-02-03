@@ -1,13 +1,15 @@
 import { Tablature } from '@/types/tablature';
 import { Song, isChordsContent, isTablatureContent } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
+import { Collection } from '@/types/collection';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Pencil, Trash2, Guitar, Wind, Music2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreVertical, Pencil, Trash2, Guitar, Wind, Music2, FolderInput } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
 
 interface ContentTableProps {
   tablatures: Tablature[];
@@ -22,6 +24,9 @@ interface ContentTableProps {
   onDeleteHarmonicaTab: (id: string) => void;
   onEditSong: (song: Song) => void;
   onDeleteSong: (id: string) => void;
+  collections?: Collection[];
+  onMoveSong?: (songId: string, collectionId: string | null) => void;
+  onMoveHarmonicaTab?: (tabId: string, collectionId: string | null) => void;
 }
 
 type ContentItem = 
@@ -37,6 +42,9 @@ export function ContentTable({
   onDeleteHarmonicaTab,
   onEditSong,
   onDeleteSong,
+  collections,
+  onMoveSong,
+  onMoveHarmonicaTab,
 }: ContentTableProps) {
   // Combine all items into a single list sorted by updated_at
   const allItems: ContentItem[] = [
@@ -95,6 +103,10 @@ export function ContentTable({
     }
   };
 
+  const getCollectionId = (item: ContentItem): string | null => {
+    return item.data.collection_id;
+  };
+
   const handleEdit = (item: ContentItem) => {
     switch (item.type) {
       case 'harmonica':
@@ -116,6 +128,19 @@ export function ContentTable({
         break;
     }
   };
+
+  const handleMove = (item: ContentItem, collectionId: string | null) => {
+    switch (item.type) {
+      case 'harmonica':
+        onMoveHarmonicaTab?.(item.data.id, collectionId);
+        break;
+      case 'song':
+        onMoveSong?.(item.data.id, collectionId);
+        break;
+    }
+  };
+
+  const canMove = collections && collections.length > 0 && (onMoveSong || onMoveHarmonicaTab);
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
@@ -163,6 +188,24 @@ export function ContentTable({
                       <Pencil className="w-4 h-4 mr-2" />
                       Редактировать
                     </DropdownMenuItem>
+                    {canMove && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <MoveToCollectionDialog
+                          collections={collections!}
+                          currentCollectionId={getCollectionId(item)}
+                          onMove={(collectionId) => handleMove(item, collectionId)}
+                          itemName={item.data.title}
+                          trigger={
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()} onSelect={(e) => e.preventDefault()}>
+                              <FolderInput className="w-4 h-4 mr-2" />
+                              Переместить
+                            </DropdownMenuItem>
+                          }
+                        />
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
                       className="text-destructive focus:text-destructive"

@@ -549,6 +549,9 @@ export default function Dashboard() {
                   onDeleteHarmonicaTab={handleDeleteHarmonicaTab}
                   onEditSong={setEditingSong}
                   onDeleteSong={handleDeleteSong}
+                  collections={collections}
+                  onMoveSong={handleMoveSong}
+                  onMoveHarmonicaTab={handleMoveHarmonicaTab}
                 />
               )}
             </TabsContent>
