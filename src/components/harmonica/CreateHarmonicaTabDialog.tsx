@@ -36,7 +36,7 @@ export function CreateHarmonicaTabDialog({ onSubmit, isLoading }: CreateHarmonic
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="w-4 h-4" />
-          Новая табулатура гармошки
+          Гармошка
         </Button>
       </DialogTrigger>
       <DialogContent>
