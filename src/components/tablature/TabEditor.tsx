@@ -163,6 +163,28 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
 
   const canAddConnection = selectedNotes.length === 2;
 
+  // Find existing connection between selected notes
+  const getExistingConnectionBetweenSelected = (): { lineId: string; connectionId: string } | null => {
+    if (selectedNotes.length !== 2) return null;
+    
+    const [first, second] = selectedNotes;
+    if (first.lineId !== second.lineId || first.stringIndex !== second.stringIndex) return null;
+    
+    const startPos = Math.min(first.position, second.position);
+    const endPos = Math.max(first.position, second.position);
+    
+    const line = content.lines.find((l) => l.id === first.lineId);
+    if (!line) return null;
+    
+    const connection = line.connections?.find(
+      (c) => c.stringIndex === first.stringIndex && c.startPosition === startPos && c.endPosition === endPos
+    );
+    
+    return connection ? { lineId: first.lineId, connectionId: connection.id } : null;
+  };
+
+  const existingConnectionBetweenSelected = getExistingConnectionBetweenSelected();
+
   const addConnection = (type: ConnectionType) => {
     if (!canAddConnection) return;
     
@@ -185,6 +207,12 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
       });
     }
     
+    clearSelection();
+  };
+
+  const removeConnectionBetweenSelected = () => {
+    if (!existingConnectionBetweenSelected) return;
+    removeConnection(existingConnectionBetweenSelected.lineId, existingConnectionBetweenSelected.connectionId);
     clearSelection();
   };
 
@@ -369,6 +397,17 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                   Сбросить
                 </Button>
               )}
+              {existingConnectionBetweenSelected && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={removeConnectionBetweenSelected}
+                  className="h-8"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Удалить связь
+                </Button>
+              )}
               {selectedConnection && selectedConnection.lineId === line.id && (
                 <Button
                   variant="destructive"
@@ -382,11 +421,16 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
               )}
               <ConnectionControls 
                 onAddConnection={addConnection}
-                disabled={!canAddConnection}
+                disabled={!canAddConnection || !!existingConnectionBetweenSelected}
               />
               {selectedNotes.length === 1 && (
                 <span className="text-xs text-muted-foreground">
                   Ctrl+клик на вторую ноту
+                </span>
+              )}
+              {canAddConnection && existingConnectionBetweenSelected && (
+                <span className="text-xs text-muted-foreground">
+                  Есть связь — можно удалить
                 </span>
               )}
             </div>
