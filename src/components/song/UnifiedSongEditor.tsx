@@ -3,7 +3,8 @@ import { Song, SongBlock, ChordsBlockContent, isChordsContent, isTablatureConten
 import { TablatureContent } from '@/types/tablature';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Plus, GripVertical, Trash2, Music2, Guitar, Eye, Pencil } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Loader2, Plus, GripVertical, Trash2, Music2, Guitar, Eye, Pencil, Link } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { useSongBlocks } from '@/hooks/useSongBlocks';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,11 +13,21 @@ import { TablatureBlockEditor } from './blocks/TablatureBlockEditor';
 import { ChordsBlockViewer } from './blocks/ChordsBlockViewer';
 import { TablatureBlockViewer } from './blocks/TablatureBlockViewer';
 import { TransposeControls } from './TransposeControls';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -101,7 +112,11 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
     }
   }, [updateBlock]);
 
-  const handleAddBlock = async (type: 'chords' | 'tablature') => {
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleAddBlock = async (type: 'chords' | 'tablature', content?: ChordsBlockContent | TablatureContent) => {
     try {
       const position = blocks.length;
       const newBlock = await createBlock.mutateAsync({
@@ -109,10 +124,58 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
         blockType: type,
         position,
       });
+      
+      // If content is provided, update the block with it
+      if (content) {
+        await updateBlock.mutateAsync({ id: newBlock.id, content });
+        newBlock.content = content;
+      }
+      
       setBlocks(prev => [...prev, newBlock]);
       toast.success(type === 'chords' ? 'Блок аккордов добавлен' : 'Блок табулатуры добавлен');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка добавления блока');
+    }
+  };
+
+  const handleImportFromUrl = async () => {
+    if (!importUrl.trim()) {
+      toast.error('Введите URL страницы с аккордами');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-song', {
+        body: { url: importUrl.trim() },
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Не удалось распарсить страницу');
+      }
+
+      // Create a chords block with the imported content
+      const chordsContent: ChordsBlockContent = { text: data.data.content || '' };
+      await handleAddBlock('chords', chordsContent);
+      
+      // Update song title and artist if empty
+      if (!title && data.data.title) {
+        handleTitleChange(data.data.title);
+      }
+      if (!artist && data.data.artist) {
+        handleArtistChange(data.data.artist);
+      }
+
+      setImportDialogOpen(false);
+      setImportUrl('');
+      toast.success('Аккорды импортированы!');
+    } catch (error: any) {
+      console.error('Error parsing song:', error);
+      toast.error(error.message || 'Ошибка при парсинге страницы');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -341,6 +404,11 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
                 <Music2 className="w-4 h-4" />
                 Аккорды (текст с аккордами)
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="gap-2">
+                <Link className="w-4 h-4" />
+                Импортировать по ссылке
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleAddBlock('tablature')} className="gap-2">
                 <Guitar className="w-4 h-4" />
                 Табулатура (ноты на грифе)
@@ -349,6 +417,57 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
           </DropdownMenu>
         </div>
       )}
+
+      {/* Import dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Импортировать аккорды по ссылке</DialogTitle>
+            <DialogDescription>
+              Вставьте ссылку на страницу с аккордами (например, Ultimate Guitar)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-url">Ссылка на страницу</Label>
+              <div className="relative">
+                <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="import-url"
+                  value={importUrl}
+                  onChange={(e) => setImportUrl(e.target.value)}
+                  placeholder="https://tabs.ultimate-guitar.com/..."
+                  className="pl-10"
+                  onKeyDown={(e) => e.key === 'Enter' && handleImportFromUrl()}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(false)}
+              disabled={isImporting}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleImportFromUrl}
+              disabled={isImporting || !importUrl.trim()}
+              className="gap-2"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Загрузка...
+                </>
+              ) : (
+                'Импортировать'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Empty state */}
       {blocks.length === 0 && (
