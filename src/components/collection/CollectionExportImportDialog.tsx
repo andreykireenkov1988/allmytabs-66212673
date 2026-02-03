@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -11,12 +10,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Upload, Copy, Check } from 'lucide-react';
+import { Download, Upload, FileDown, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
 import { Collection } from '@/types/collection';
 import { CollectionSelect } from './CollectionSelect';
+import { exportToMarkdown, parseMarkdown, downloadMarkdownFile } from '@/lib/collectionMarkdown';
 
 interface ExportData {
   version: string;
@@ -58,13 +58,13 @@ export function CollectionExportImportDialog({
 }: CollectionExportImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
-  const [importText, setImportText] = useState('');
-  const [copied, setCopied] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedExportCollection, setSelectedExportCollection] = useState<string | null>(null);
   const [selectedImportCollection, setSelectedImportCollection] = useState<string | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [importMode, setImportMode] = useState<'existing' | 'new'>('existing');
+  const [importedFile, setImportedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter items by selected collection for export
   const exportItems = useMemo(() => {
@@ -77,53 +77,52 @@ export function CollectionExportImportDialog({
     return { songs: filteredSongs, harmonicaTabs: filteredHarmonicaTabs };
   }, [songs, harmonicaTabs, selectedExportCollection]);
 
-  const exportData: ExportData = useMemo(() => {
-    const collection = collections.find(c => c.id === selectedExportCollection);
-    return {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      collection: collection ? { name: collection.name } : undefined,
-      songs: exportItems.songs.map(song => ({
-        title: song.title,
-        artist: song.artist,
-        blocks: (song.blocks || []).map(block => ({
-          block_type: block.block_type,
-          title: block.title,
-          content: block.content,
-          position: block.position,
-        })),
-      })),
-      harmonicaTabs: exportItems.harmonicaTabs.map(tab => ({
-        title: tab.title,
-        content: tab.content,
-      })),
-    };
-  }, [exportItems, collections, selectedExportCollection]);
+  const selectedCollection = collections.find(c => c.id === selectedExportCollection);
 
-  const exportText = useMemo(() => JSON.stringify(exportData, null, 2), [exportData]);
+  const handleExport = () => {
+    const markdown = exportToMarkdown(
+      exportItems.songs,
+      exportItems.harmonicaTabs,
+      selectedCollection?.name
+    );
+    
+    const filename = selectedCollection 
+      ? `${selectedCollection.name}.md`
+      : 'collection.md';
+    
+    downloadMarkdownFile(markdown, filename);
+    toast.success('Файл скачан!');
+  };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(exportText);
-    setCopied(true);
-    toast.success('Скопировано в буфер обмена');
-    setTimeout(() => setCopied(false), 2000);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.md')) {
+        toast.error('Пожалуйста, выберите .md файл');
+        return;
+      }
+      setImportedFile(file);
+    }
   };
 
   const handleImport = async () => {
-    if (!importText.trim()) {
-      toast.error('Вставьте данные для импорта');
+    if (!importedFile) {
+      toast.error('Выберите файл для импорта');
       return;
     }
 
     try {
-      const data = JSON.parse(importText) as ExportData;
-      
-      if (!data.version || (!data.songs && !data.harmonicaTabs)) {
-        throw new Error('Неверный формат данных');
-      }
-
       setIsImporting(true);
       
+      const text = await importedFile.text();
+      const parsed = parseMarkdown(text);
+      
+      if (parsed.songs.length === 0 && parsed.harmonicaTabs.length === 0) {
+        toast.error('Файл не содержит данных для импорта');
+        setIsImporting(false);
+        return;
+      }
+
       const targetCollectionId = importMode === 'existing' ? selectedImportCollection : null;
       const collectionName = importMode === 'new' ? newCollectionName.trim() : undefined;
 
@@ -133,13 +132,32 @@ export function CollectionExportImportDialog({
         return;
       }
 
-      await onImport(data, targetCollectionId, collectionName);
+      // Convert to ExportData format for compatibility
+      const exportData: ExportData = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        songs: parsed.songs.map(s => ({
+          title: s.title,
+          artist: s.artist,
+          blocks: s.blocks,
+        })),
+        harmonicaTabs: parsed.harmonicaTabs.map(t => ({
+          title: t.title,
+          content: t.content,
+        })),
+      };
+
+      await onImport(exportData, targetCollectionId, collectionName);
       
-      toast.success('Импорт завершён!');
-      setImportText('');
+      toast.success(`Импортировано: ${parsed.songs.length} гитара, ${parsed.harmonicaTabs.length} гармошка`);
+      setImportedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       setOpen(false);
     } catch (error) {
-      toast.error('Ошибка импорта: неверный формат данных');
+      console.error('Import error:', error);
+      toast.error('Ошибка импорта файла');
     } finally {
       setIsImporting(false);
     }
@@ -155,7 +173,7 @@ export function CollectionExportImportDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Экспорт и импорт коллекции</DialogTitle>
         </DialogHeader>
@@ -163,11 +181,11 @@ export function CollectionExportImportDialog({
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'export' | 'import')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="export" className="gap-2">
-              <Download className="w-4 h-4" />
+              <FileDown className="w-4 h-4" />
               Экспорт
             </TabsTrigger>
             <TabsTrigger value="import" className="gap-2">
-              <Upload className="w-4 h-4" />
+              <FileUp className="w-4 h-4" />
               Импорт
             </TabsTrigger>
           </TabsList>
@@ -190,15 +208,9 @@ export function CollectionExportImportDialog({
               </p>
             </div>
             
-            <Textarea
-              value={exportText}
-              readOnly
-              className="font-mono text-xs h-64"
-            />
-            
-            <Button onClick={handleCopy} className="w-full gap-2">
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Скопировано!' : 'Копировать'}
+            <Button onClick={handleExport} className="w-full gap-2">
+              <FileDown className="w-4 h-4" />
+              Скачать .md файл
             </Button>
           </TabsContent>
 
@@ -243,19 +255,30 @@ export function CollectionExportImportDialog({
               )}
             </div>
 
-            <Textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="Вставьте данные для импорта..."
-              className="font-mono text-xs h-64"
-            />
+            <div className="space-y-2">
+              <Label>Файл для импорта</Label>
+              <div className="flex gap-2">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".md"
+                  onChange={handleFileSelect}
+                  className="flex-1"
+                />
+              </div>
+              {importedFile && (
+                <p className="text-sm text-muted-foreground">
+                  Выбран: {importedFile.name}
+                </p>
+              )}
+            </div>
             
             <Button 
               onClick={handleImport} 
               className="w-full gap-2"
-              disabled={!importText.trim() || isImporting}
+              disabled={!importedFile || isImporting}
             >
-              <Upload className="w-4 h-4" />
+              <FileUp className="w-4 h-4" />
               {isImporting ? 'Импорт...' : 'Импортировать'}
             </Button>
           </TabsContent>
