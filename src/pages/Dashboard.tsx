@@ -16,6 +16,7 @@ import { ViewModeToggle, ViewMode } from '@/components/dashboard/ViewModeToggle'
 import { CreateCollectionDialog } from '@/components/collection/CreateCollectionDialog';
 import { CollectionExportImportDialog } from '@/components/collection/CollectionExportImportDialog';
 import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
+import { DeleteCollectionDialog } from '@/components/collection/DeleteCollectionDialog';
 import { Song, ParsedSongData, ChordsBlockContent } from '@/types/song';
 import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
 import { TablatureContent } from '@/types/tablature';
@@ -133,13 +134,27 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteCollection = async (id: string) => {
+  const handleDeleteCollection = async (id: string, deleteCards: boolean) => {
     try {
+      if (deleteCards) {
+        // Delete all songs in this collection
+        const songsToDelete = songs.filter(s => s.collection_id === id);
+        for (const song of songsToDelete) {
+          await deleteSong.mutateAsync(song.id);
+        }
+        
+        // Delete all harmonica tabs in this collection
+        const tabsToDelete = harmonicaTabs.filter(t => t.collection_id === id);
+        for (const tab of tabsToDelete) {
+          await deleteHarmonicaTab.mutateAsync(tab.id);
+        }
+      }
+      
       await deleteCollection.mutateAsync(id);
       if (selectedCollectionId === id) {
         setSelectedCollectionId(null);
       }
-      toast.success('Коллекция удалена');
+      toast.success(deleteCards ? 'Коллекция и карточки удалены' : 'Коллекция удалена');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка удаления');
     }
@@ -420,27 +435,12 @@ export default function Dashboard() {
                   >
                     {collection.name}
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <Trash2 className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Удалить коллекцию?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Коллекция "{collection.name}" будет удалена. Карточки внутри коллекции останутся без коллекции.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Отмена</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteCollection(collection.id)}>
-                          Удалить
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <DeleteCollectionDialog
+                    collection={collection}
+                    songsCount={songs.filter(s => s.collection_id === collection.id).length}
+                    harmonicaTabsCount={harmonicaTabs.filter(t => t.collection_id === collection.id).length}
+                    onDelete={handleDeleteCollection}
+                  />
                 </div>
               ))}
             </div>
