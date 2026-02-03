@@ -5,6 +5,3 @@ verify_jwt = false
 
 [functions.parse-song]
 verify_jwt = false
-
-[functions.recognize-tabs]
-verify_jwt = false
