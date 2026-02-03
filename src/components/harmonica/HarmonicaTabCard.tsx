@@ -29,9 +29,6 @@ export function HarmonicaTabCard({ tab, onEdit, onDelete, collections, onMove }:
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg truncate">{tab.title}</CardTitle>
-            <CardDescription className="mt-1">
-              {lineCount} {lineCount === 1 ? 'строка' : lineCount < 5 ? 'строки' : 'строк'} • {noteCount} {noteCount === 1 ? 'нота' : noteCount < 5 ? 'ноты' : 'нот'}
-            </CardDescription>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -73,11 +70,6 @@ export function HarmonicaTabCard({ tab, onEdit, onDelete, collections, onMove }:
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
-        <p className="text-xs text-muted-foreground">
-          Обновлено {formatDistanceToNow(new Date(tab.updated_at), { addSuffix: true, locale: ru })}
-        </p>
-      </CardContent>
     </Card>
   );
 }
