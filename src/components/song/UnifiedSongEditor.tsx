@@ -301,19 +301,19 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
           
           <div className="flex gap-1 p-1 bg-muted rounded-lg">
             <Button
-              variant={isViewMode ? "secondary" : "ghost"}
+              variant={isViewMode ? "default" : "ghost"}
               size="sm"
               onClick={() => setIsViewMode(true)}
-              className="gap-2"
+              className={`gap-2 ${isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
             >
               <Eye className="w-4 h-4" />
               Просмотр
             </Button>
             <Button
-              variant={!isViewMode ? "secondary" : "ghost"}
+              variant={!isViewMode ? "default" : "ghost"}
               size="sm"
               onClick={() => setIsViewMode(false)}
-              className="gap-2"
+              className={`gap-2 ${!isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
             >
               <Pencil className="w-4 h-4" />
               Редактор
