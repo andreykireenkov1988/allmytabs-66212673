@@ -71,7 +71,7 @@ export function ImportSongDialog({ onImport, onCreateEmpty, isLoading }: ImportS
           ) : (
             <Plus className="w-4 h-4" />
           )}
-          Добавить песню
+          Гитара
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
