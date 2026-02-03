@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Loader2, Eye, Edit2 } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TransposeControls } from './TransposeControls';
+import { transposeContent, CHORD_PATTERN } from '@/lib/chordUtils';
 
 interface SongEditorProps {
   song: Song;
@@ -14,15 +16,14 @@ interface SongEditorProps {
   isSaving?: boolean;
 }
 
-// Chord pattern for highlighting
-const CHORD_PATTERN = /\b([A-H][#b]?(?:m|maj|min|dim|aug|sus|add|7|9|11|13|\/[A-H][#b]?)*)\b/g;
-
 export function SongEditor({ song, onBack, onSave, isSaving }: SongEditorProps) {
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist || '');
   const [content, setContent] = useState(song.content);
   const [isSavingState, setIsSavingState] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('preview');
+  const [transpose, setTranspose] = useState(0);
+  const [useFlats, setUseFlats] = useState(false);
   const initialLoad = useRef(true);
 
   // Debounced auto-save
@@ -50,9 +51,10 @@ export function SongEditor({ song, onBack, onSave, isSaving }: SongEditorProps) 
     }
   }, [title, artist, content, song, debouncedSave]);
 
-  // Render content with highlighted chords
+  // Render content with highlighted chords and transposition
   const renderedContent = useMemo(() => {
-    const lines = content.split('\n');
+    const transposedContent = transposeContent(content, transpose, useFlats);
+    const lines = transposedContent.split('\n');
     
     return lines.map((line, lineIndex) => {
       // Check if this is a section header
@@ -105,7 +107,7 @@ export function SongEditor({ song, onBack, onSave, isSaving }: SongEditorProps) 
       // Empty line
       return <div key={lineIndex} className="h-4" />;
     });
-  }, [content]);
+  }, [content, transpose, useFlats]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -141,6 +143,15 @@ export function SongEditor({ song, onBack, onSave, isSaving }: SongEditorProps) 
             Сохранение...
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <TransposeControls
+          value={transpose}
+          onChange={setTranspose}
+          useFlats={useFlats}
+          onToggleFlats={() => setUseFlats(!useFlats)}
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
