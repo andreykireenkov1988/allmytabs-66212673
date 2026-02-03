@@ -369,19 +369,16 @@ export default function Dashboard() {
   return <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div>
-            
-            <p className="text-muted-foreground">
-              {filteredSongs.length} гитара • {filteredHarmonicaTabs.length} гармошка
-            </p>
-          </div>
+        <div className="flex items-center gap-4 mb-8 flex-wrap">
           <div className="flex gap-2 flex-wrap">
             <ImportSongDialog onImport={handleImportSong} onCreateEmpty={handleCreateEmptySong} isLoading={createSong.isPending} />
             <CreateHarmonicaTabDialog onSubmit={handleCreateHarmonicaTab} isLoading={createHarmonicaTab.isPending} />
             <CreateCollectionDialog onSubmit={handleCreateCollection} isLoading={createCollection.isPending} />
             <CollectionExportImportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} onImport={handleImportCollection} />
           </div>
+          <p className="text-muted-foreground text-sm">
+            {filteredSongs.length} гитара • {filteredHarmonicaTabs.length} гармошка
+          </p>
         </div>
 
         {/* Collections filter */}
