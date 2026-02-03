@@ -70,7 +70,7 @@ export function ContentTable({
       case 'harmonica':
         return 'Гармошка';
       case 'song':
-        return 'Песня';
+        return 'Гитара';
     }
   };
 
@@ -147,7 +147,7 @@ export function ContentTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">Тип</TableHead>
+            <TableHead className="w-[120px]">Инструмент</TableHead>
             <TableHead>Название</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
