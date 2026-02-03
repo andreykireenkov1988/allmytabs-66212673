@@ -10,7 +10,7 @@ import { useDebouncedCallback } from '@/hooks/useDebounce';
 interface EditHarmonicaTabViewProps {
   tab: HarmonicaTab;
   onBack: () => void;
-  onSave: (id: string, title: string, artist: string | null, content: HarmonicaTabContent) => void;
+  onSave: (id: string, title: string, content: HarmonicaTabContent) => void;
   isSaving?: boolean;
 }
 
@@ -21,7 +21,6 @@ export function EditHarmonicaTabView({
   isSaving,
 }: EditHarmonicaTabViewProps) {
   const [title, setTitle] = useState(tab.title);
-  const [artist, setArtist] = useState(tab.artist || '');
   const [content, setContent] = useState<HarmonicaTabContent>(() => {
     if (!tab.content?.lines?.length) {
       return { lines: [createEmptyHarmonicaLine()] };
@@ -33,8 +32,8 @@ export function EditHarmonicaTabView({
   const initialLoad = useRef(true);
 
   // Debounced auto-save function
-  const debouncedSave = useDebouncedCallback((id: string, t: string, a: string | null, c: HarmonicaTabContent) => {
-    onSave(id, t, a, c);
+  const debouncedSave = useDebouncedCallback((id: string, t: string, c: HarmonicaTabContent) => {
+    onSave(id, t, c);
     setIsSavingState(false);
   }, 1000);
 
@@ -46,14 +45,13 @@ export function EditHarmonicaTabView({
     }
 
     const titleChanged = title !== tab.title;
-    const artistChanged = artist !== (tab.artist || '');
     const contentChanged = JSON.stringify(content) !== JSON.stringify(tab.content);
 
-    if (titleChanged || artistChanged || contentChanged) {
+    if (titleChanged || contentChanged) {
       setIsSavingState(true);
-      debouncedSave(tab.id, title, artist || null, content);
+      debouncedSave(tab.id, title, content);
     }
-  }, [title, artist, content, tab, debouncedSave]);
+  }, [title, content, tab, debouncedSave]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -67,20 +65,12 @@ export function EditHarmonicaTabView({
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1 space-y-1">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-2xl font-bold bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
-              placeholder="Название табулатуры"
-            />
-            <Input
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              className="text-sm text-muted-foreground bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
-              placeholder="Исполнитель"
-            />
-          </div>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="text-2xl font-bold bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+            placeholder="Название табулатуры"
+          />
         </div>
 
         <div className="flex items-center gap-3">

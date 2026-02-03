@@ -104,9 +104,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleSaveHarmonicaTab = async (id: string, title: string, artist: string | null, content: HarmonicaTabContent) => {
+  const handleSaveHarmonicaTab = async (id: string, title: string, content: HarmonicaTabContent) => {
     try {
-      await updateHarmonicaTab.mutateAsync({ id, title, artist, content });
+      await updateHarmonicaTab.mutateAsync({ id, title, content });
       toast.success('Сохранено!');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка сохранения');

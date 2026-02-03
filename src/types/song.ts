@@ -23,7 +23,7 @@ export interface SongBlock {
   song_id: string;
   user_id: string;
   block_type: SongBlockType;
-  title: string | null;
+  title: string;
   content: ChordsBlockContent | TablatureContent;
   position: number;
   created_at: string;

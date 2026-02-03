@@ -347,7 +347,7 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
                 )}
               </div>
               <Input
-                value={block.title || ''}
+                value={block.title}
                 onChange={(e) => handleBlockTitleChange(block.id, e.target.value)}
                 placeholder={block.block_type === 'chords' ? 'Аккорды (например: Куплет 1)' : 'Табулатура (например: Соло)'}
                 className="flex-1 bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-sm font-medium"

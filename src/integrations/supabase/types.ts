@@ -16,7 +16,6 @@ export type Database = {
     Tables: {
       harmonica_tabs: {
         Row: {
-          artist: string | null
           content: Json
           created_at: string
           id: string
@@ -25,7 +24,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          artist?: string | null
           content?: Json
           created_at?: string
           id?: string
@@ -34,7 +32,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          artist?: string | null
           content?: Json
           created_at?: string
           id?: string
