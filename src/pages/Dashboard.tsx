@@ -356,7 +356,19 @@ export default function Dashboard() {
       </div>;
   }
   if (editingHarmonicaTab) {
-    return;
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <main className="container mx-auto px-4 py-8 flex-1">
+          <EditHarmonicaTabView
+            tab={editingHarmonicaTab}
+            onBack={() => setEditingHarmonicaTab(null)}
+            onSave={handleSaveHarmonicaTab}
+            isSaving={updateHarmonicaTab.isPending}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
   }
   const totalCount = filteredSongs.length + filteredHarmonicaTabs.length;
   const isEmpty = songs.length === 0 && harmonicaTabs.length === 0;
