@@ -66,11 +66,12 @@ export function useHarmonicaTabs(userId: string | undefined) {
   });
 
   const updateHarmonicaTab = useMutation({
-    mutationFn: async ({ id, title, content, collectionId }: { id: string; title?: string; content?: HarmonicaTabContent; collectionId?: string | null }) => {
+    mutationFn: async ({ id, title, content, collectionId, imageUrl }: { id: string; title?: string; content?: HarmonicaTabContent; collectionId?: string | null; imageUrl?: string | null }) => {
       const updateData: Record<string, unknown> = {};
       if (title !== undefined) updateData.title = title;
       if (content !== undefined) updateData.content = content as unknown as Json;
       if (collectionId !== undefined) updateData.collection_id = collectionId;
+      if (imageUrl !== undefined) updateData.image_url = imageUrl;
 
       const { data, error } = await supabase
         .from('harmonica_tabs')
@@ -84,6 +85,22 @@ export function useHarmonicaTabs(userId: string | undefined) {
         ...data,
         content: migrateContent(data.content),
       } as HarmonicaTab;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['harmonica_tabs', userId] });
+    },
+  });
+
+  const generateHarmonicaImage = useMutation({
+    mutationFn: async ({ id, title, artist }: { id: string; title: string; artist?: string | null }) => {
+      const { data, error } = await supabase.functions.invoke('generate-card-image', {
+        body: { title, artist, itemType: 'harmonica', itemId: id },
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      
+      return data.imageUrl as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['harmonica_tabs', userId] });
@@ -111,5 +128,6 @@ export function useHarmonicaTabs(userId: string | undefined) {
     createHarmonicaTab,
     updateHarmonicaTab,
     deleteHarmonicaTab,
+    generateHarmonicaImage,
   };
 }

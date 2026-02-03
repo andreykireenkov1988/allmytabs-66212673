@@ -56,6 +56,7 @@ export default function Dashboard() {
     createSong,
     updateSong,
     deleteSong,
+    generateSongImage,
   } = useSongs(user?.id);
 
   const {
@@ -64,6 +65,7 @@ export default function Dashboard() {
     createHarmonicaTab,
     updateHarmonicaTab,
     deleteHarmonicaTab,
+    generateHarmonicaImage,
   } = useHarmonicaTabs(user?.id);
 
   const {
@@ -80,6 +82,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [generatingSongId, setGeneratingSongId] = useState<string | null>(null);
+  const [generatingHarmonicaId, setGeneratingHarmonicaId] = useState<string | null>(null);
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value);
@@ -257,6 +261,25 @@ export default function Dashboard() {
       toast.success('Перемещено!');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка перемещения');
+    }
+  };
+
+  // Handlers for image generation
+  const handleGenerateSongImage = async (song: Song) => {
+    setGeneratingSongId(song.id);
+    try {
+      await generateSongImage.mutateAsync({ id: song.id, title: song.title, artist: song.artist });
+    } finally {
+      setGeneratingSongId(null);
+    }
+  };
+
+  const handleGenerateHarmonicaImage = async (tab: HarmonicaTab) => {
+    setGeneratingHarmonicaId(tab.id);
+    try {
+      await generateHarmonicaImage.mutateAsync({ id: tab.id, title: tab.title, artist: tab.artist });
+    } finally {
+      setGeneratingHarmonicaId(null);
     }
   };
 
@@ -522,6 +545,8 @@ export default function Dashboard() {
                       onDelete={handleDeleteSong}
                       collections={collections}
                       onMove={(collectionId) => handleMoveSong(song.id, collectionId)}
+                      onGenerateImage={handleGenerateSongImage}
+                      isGeneratingImage={generatingSongId === song.id}
                     />
                   ))}
                   {showHarmonica && filteredHarmonicaTabs.map((tab) => (
@@ -532,6 +557,8 @@ export default function Dashboard() {
                       onDelete={handleDeleteHarmonicaTab}
                       collections={collections}
                       onMove={(collectionId) => handleMoveHarmonicaTab(tab.id, collectionId)}
+                      onGenerateImage={handleGenerateHarmonicaImage}
+                      isGeneratingImage={generatingHarmonicaId === tab.id}
                     />
                   ))}
                 </div>
