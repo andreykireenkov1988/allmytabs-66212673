@@ -13,6 +13,7 @@ import { TablatureBlockEditor } from './blocks/TablatureBlockEditor';
 import { ChordsBlockViewer } from './blocks/ChordsBlockViewer';
 import { TablatureBlockViewer } from './blocks/TablatureBlockViewer';
 import { TransposeControls } from './TransposeControls';
+import { FullSongExportImportDialog } from './FullSongExportImportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -179,6 +180,49 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
     }
   };
 
+  const handleFullImport = async (data: {
+    title: string;
+    artist: string;
+    blocks: Array<{ type: 'chords' | 'tablature'; title: string; content: ChordsBlockContent | TablatureContent }>;
+  }) => {
+    try {
+      // Update song metadata
+      if (data.title && data.title !== title) {
+        handleTitleChange(data.title);
+      }
+      if (data.artist && data.artist !== artist) {
+        handleArtistChange(data.artist);
+      }
+
+      // Delete existing blocks
+      for (const block of blocks) {
+        await deleteBlock.mutateAsync(block.id);
+      }
+
+      // Create new blocks
+      const newBlocks: SongBlock[] = [];
+      for (let i = 0; i < data.blocks.length; i++) {
+        const blockData = data.blocks[i];
+        const newBlock = await createBlock.mutateAsync({
+          songId: song.id,
+          blockType: blockData.type,
+          title: blockData.title,
+          position: i,
+        });
+        await updateBlock.mutateAsync({ id: newBlock.id, content: blockData.content });
+        newBlock.content = blockData.content;
+        newBlock.title = blockData.title;
+        newBlocks.push(newBlock);
+      }
+
+      setBlocks(newBlocks);
+      toast.success('Песня импортирована!');
+    } catch (error: any) {
+      console.error('Error importing song:', error);
+      toast.error(error.message || 'Ошибка при импорте песни');
+    }
+  };
+
   const handleDeleteBlock = async (blockId: string) => {
     try {
       await deleteBlock.mutateAsync(blockId);
@@ -248,6 +292,12 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
               Сохранение...
             </div>
           )}
+          
+          <FullSongExportImportDialog 
+            song={song}
+            blocks={blocks}
+            onImport={handleFullImport}
+          />
           
           <div className="flex gap-1 p-1 bg-muted rounded-lg">
             <Button
@@ -368,8 +418,6 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
                 <ChordsBlockEditor
                   content={isChordsContent(block.content) ? block.content : { text: '' }}
                   onChange={(content) => handleBlockContentChange(block.id, content)}
-                  transpose={transpose}
-                  useFlats={useFlats}
                 />
               )
             ) : (
@@ -381,7 +429,6 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
                 <TablatureBlockEditor
                   content={isTablatureContent(block.content) ? block.content : { lines: [] }}
                   onChange={(content) => handleBlockContentChange(block.id, content)}
-                  blockTitle={block.title || `${title} - Табулатура`}
                 />
               )
             )}
