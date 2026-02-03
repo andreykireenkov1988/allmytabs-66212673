@@ -5,9 +5,11 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Music, Guitar } from 'lucide-react';
+import { ResetPasswordForm } from './ResetPasswordForm';
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +35,10 @@ export function AuthForm() {
       setLoading(false);
     }
   };
+
+  if (showResetPassword) {
+    return <ResetPasswordForm onBack={() => setShowResetPassword(false)} />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -79,6 +85,16 @@ export function AuthForm() {
                 className="bg-secondary/50 border-border/50 focus:border-primary"
               />
             </div>
+
+            {isLogin && (
+              <button
+                type="button"
+                onClick={() => setShowResetPassword(true)}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Забыли пароль?
+              </button>
+            )}
 
             <Button
               type="submit"
