@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      harmonica_tabs: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       songs: {
         Row: {
           artist: string | null

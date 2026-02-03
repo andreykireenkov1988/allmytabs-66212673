@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTablatures } from '@/hooks/useTablatures';
 import { useSongs } from '@/hooks/useSongs';
+import { useHarmonicaTabs } from '@/hooks/useHarmonicaTabs';
 import { Header } from '@/components/layout/Header';
 import { TablatureCard } from '@/components/tablature/TablatureCard';
 import { CreateTablatureDialog } from '@/components/tablature/CreateTablatureDialog';
@@ -9,10 +10,14 @@ import { EditTablatureView } from '@/components/tablature/EditTablatureView';
 import { SongCard } from '@/components/song/SongCard';
 import { ImportSongDialog } from '@/components/song/ImportSongDialog';
 import { SongEditor } from '@/components/song/SongEditor';
+import { HarmonicaTabCard } from '@/components/harmonica/HarmonicaTabCard';
+import { CreateHarmonicaTabDialog } from '@/components/harmonica/CreateHarmonicaTabDialog';
+import { EditHarmonicaTabView } from '@/components/harmonica/EditHarmonicaTabView';
 import { Tablature, TablatureContent } from '@/types/tablature';
 import { Song, ParsedSongData } from '@/types/song';
+import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
 import { toast } from 'sonner';
-import { Music, Loader2, Guitar, Music2 } from 'lucide-react';
+import { Music, Loader2, Guitar, Music2, Wind } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Dashboard() {
@@ -33,11 +38,20 @@ export default function Dashboard() {
     deleteSong,
   } = useSongs(user?.id);
 
+  const {
+    harmonicaTabs,
+    isLoading: isLoadingHarmonica,
+    createHarmonicaTab,
+    updateHarmonicaTab,
+    deleteHarmonicaTab,
+  } = useHarmonicaTabs(user?.id);
+
   const [editingTab, setEditingTab] = useState<Tablature | null>(null);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [editingHarmonicaTab, setEditingHarmonicaTab] = useState<HarmonicaTab | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  const isLoading = isLoadingTabs || isLoadingSongs;
+  const isLoading = isLoadingTabs || isLoadingSongs || isLoadingHarmonica;
 
   // Handlers for tablatures
   const handleCreateTab = async (title: string) => {
@@ -116,6 +130,35 @@ export default function Dashboard() {
     }
   };
 
+  // Handlers for harmonica tabs
+  const handleCreateHarmonicaTab = async (title: string) => {
+    if (!user) return;
+    try {
+      await createHarmonicaTab.mutateAsync({ title, userId: user.id });
+      toast.success('Табулатура гармошки создана!');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка создания');
+    }
+  };
+
+  const handleSaveHarmonicaTab = async (id: string, title: string, content: HarmonicaTabContent) => {
+    try {
+      await updateHarmonicaTab.mutateAsync({ id, title, content });
+      toast.success('Сохранено!');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка сохранения');
+    }
+  };
+
+  const handleDeleteHarmonicaTab = async (id: string) => {
+    try {
+      await deleteHarmonicaTab.mutateAsync(id);
+      toast.success('Табулатура гармошки удалена');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка удаления');
+    }
+  };
+
   // Editing views
   if (editingTab) {
     return (
@@ -149,12 +192,29 @@ export default function Dashboard() {
     );
   }
 
-  const totalCount = tablatures.length + songs.length;
+  if (editingHarmonicaTab) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <EditHarmonicaTabView
+            tab={editingHarmonicaTab}
+            onBack={() => setEditingHarmonicaTab(null)}
+            onSave={handleSaveHarmonicaTab}
+            isSaving={updateHarmonicaTab.isPending}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  const totalCount = tablatures.length + songs.length + harmonicaTabs.length;
   const isEmpty = totalCount === 0;
 
   // Filter items based on active tab
   const showTabs = activeTab === 'all' || activeTab === 'tabs';
   const showSongs = activeTab === 'all' || activeTab === 'songs';
+  const showHarmonica = activeTab === 'all' || activeTab === 'harmonica';
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,13 +226,17 @@ export default function Dashboard() {
               Моя коллекция
             </h1>
             <p className="text-muted-foreground">
-              {tablatures.length} табулатур • {songs.length} песен
+              {tablatures.length} гитарных табулатур • {harmonicaTabs.length} табулатур гармошки • {songs.length} песен
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <CreateTablatureDialog
               onSubmit={handleCreateTab}
               isLoading={createTablature.isPending}
+            />
+            <CreateHarmonicaTabDialog
+              onSubmit={handleCreateHarmonicaTab}
+              isLoading={createHarmonicaTab.isPending}
             />
             <ImportSongDialog
               onImport={handleImportSong}
@@ -195,12 +259,16 @@ export default function Dashboard() {
               Пока ничего нет
             </h2>
             <p className="text-muted-foreground mb-6">
-              Создайте табулатуру или добавьте песню с аккордами
+              Создайте табулатуру для гитары или гармошки, или добавьте песню с аккордами
             </p>
             <div className="flex justify-center gap-3 flex-wrap">
               <CreateTablatureDialog
                 onSubmit={handleCreateTab}
                 isLoading={createTablature.isPending}
+              />
+              <CreateHarmonicaTabDialog
+                onSubmit={handleCreateHarmonicaTab}
+                isLoading={createHarmonicaTab.isPending}
               />
               <ImportSongDialog
                 onImport={handleImportSong}
@@ -211,14 +279,18 @@ export default function Dashboard() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 flex-wrap h-auto">
               <TabsTrigger value="all" className="gap-2">
                 <Music className="w-4 h-4" />
                 Все ({totalCount})
               </TabsTrigger>
               <TabsTrigger value="tabs" className="gap-2">
                 <Guitar className="w-4 h-4" />
-                Табулатуры ({tablatures.length})
+                Гитара ({tablatures.length})
+              </TabsTrigger>
+              <TabsTrigger value="harmonica" className="gap-2">
+                <Wind className="w-4 h-4" />
+                Гармошка ({harmonicaTabs.length})
               </TabsTrigger>
               <TabsTrigger value="songs" className="gap-2">
                 <Music2 className="w-4 h-4" />
@@ -234,6 +306,14 @@ export default function Dashboard() {
                     tablature={tab}
                     onEdit={setEditingTab}
                     onDelete={handleDeleteTab}
+                  />
+                ))}
+                {showHarmonica && harmonicaTabs.map((tab) => (
+                  <HarmonicaTabCard
+                    key={tab.id}
+                    tab={tab}
+                    onEdit={setEditingHarmonicaTab}
+                    onDelete={handleDeleteHarmonicaTab}
                   />
                 ))}
                 {showSongs && songs.map((song) => (
