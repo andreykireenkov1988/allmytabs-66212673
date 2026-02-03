@@ -23,6 +23,7 @@ export interface HarmonicaTab {
   id: string;
   user_id: string;
   title: string;
+  artist: string | null;
   content: HarmonicaTabContent;
   created_at: string;
   updated_at: string;
