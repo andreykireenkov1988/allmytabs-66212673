@@ -126,27 +126,6 @@ export function SongCard({ song, onEdit, onDelete, collections, onMove }: SongCa
         </div>
       </CardHeader>
       <CardContent>
-        {/* Block badges */}
-        <div className="flex gap-1 mb-2 flex-wrap">
-          {hasChords && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <Music2 className="w-3 h-3" />
-              Аккорды
-            </Badge>
-          )}
-          {hasTabs && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <Guitar className="w-3 h-3" />
-              {tabBlocks.length} таб{tabBlocks.length === 1 ? '' : tabBlocks.length < 5 ? 'а' : 'ов'}
-            </Badge>
-          )}
-          {blocks.length === 0 && (
-            <Badge variant="outline" className="text-xs">
-              Пустая
-            </Badge>
-          )}
-        </div>
-        
         {preview ? (
           <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap line-clamp-4 bg-muted/30 p-2 rounded">
             {preview}
@@ -160,10 +139,6 @@ export function SongCard({ song, onEdit, onDelete, collections, onMove }: SongCa
             Нет содержимого
           </div>
         )}
-        
-        <p className="text-xs text-muted-foreground mt-2">
-          {new Date(song.updated_at).toLocaleDateString('ru-RU')}
-        </p>
       </CardContent>
     </Card>
   );
