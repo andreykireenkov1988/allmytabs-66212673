@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Eye, Edit2 } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TransposeControls } from './TransposeControls';
+import { SongExportImportDialog } from './SongExportImportDialog';
 import { transposeContent, CHORD_PATTERN } from '@/lib/chordUtils';
 
 interface SongEditorProps {
@@ -137,12 +138,24 @@ export function SongEditor({ song, onBack, onSave, isSaving }: SongEditorProps) 
           </div>
         </div>
 
-        {(isSaving || isSavingState) && (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Сохранение...
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {(isSaving || isSavingState) && (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Сохранение...
+            </div>
+          )}
+          <SongExportImportDialog
+            title={title}
+            artist={artist}
+            content={content}
+            onImport={(newTitle, newArtist, newContent) => {
+              setTitle(newTitle);
+              setArtist(newArtist);
+              setContent(newContent);
+            }}
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-4">
