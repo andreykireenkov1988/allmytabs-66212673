@@ -27,9 +27,7 @@ export function Header() {
         </div>
 
         {user && <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {user.email}
-            </span>
+            
             <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground gap-2">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Выйти</span>
