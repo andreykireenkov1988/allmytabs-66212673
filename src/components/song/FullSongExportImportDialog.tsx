@@ -43,13 +43,37 @@ interface FullSongExportImportDialogProps {
 export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongExportImportDialogProps) {
   const [open, setOpen] = useState(false);
   const [importText, setImportText] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copiedTxt, setCopiedTxt] = useState(false);
+  const [copiedMd, setCopiedMd] = useState(false);
 
   const serializeConnections = (connections: TablatureConnection[]): string => {
     if (!connections || connections.length === 0) return '';
     return connections.map(c => 
       `${c.stringIndex}:${c.startPosition}-${c.endPosition}${CONNECTION_SYMBOLS[c.type]}`
     ).join(',');
+  };
+
+  const formatTabLine = (tabLine: TablatureContent['lines'][0]): string[] => {
+    const result: string[] = [];
+    
+    STRING_NAMES.forEach((stringName, stringIndex) => {
+      let tabLineStr = `${stringName}|`;
+      for (let pos = 0; pos < tabLine.columns; pos++) {
+        const note = tabLine.notes.find(
+          (n) => n.stringIndex === stringIndex && n.position === pos
+        );
+        if (note?.fret) {
+          const fret = note.fret.padEnd(2, '-');
+          tabLineStr += fret;
+        } else {
+          tabLineStr += '--';
+        }
+      }
+      tabLineStr += '|';
+      result.push(tabLineStr);
+    });
+    
+    return result;
   };
 
   const exportToText = (): string => {
@@ -90,28 +114,63 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
             lines.push(`# connections: ${serializeConnections(tabLine.connections)}`);
           }
           
-          STRING_NAMES.forEach((stringName, stringIndex) => {
-            let tabLineStr = `${stringName}|`;
-            for (let pos = 0; pos < tabLine.columns; pos++) {
-              const note = tabLine.notes.find(
-                (n) => n.stringIndex === stringIndex && n.position === pos
-              );
-              if (note?.fret) {
-                const fret = note.fret.padEnd(2, '-');
-                tabLineStr += fret;
-              } else {
-                tabLineStr += '--';
-              }
-            }
-            tabLineStr += '|';
-            lines.push(tabLineStr);
-          });
+          lines.push(...formatTabLine(tabLine));
           lines.push('');
         });
       }
       
       lines.push('---');
       lines.push('');
+    });
+
+    return lines.join('\n');
+  };
+
+  const exportToMarkdown = (): string => {
+    const lines: string[] = [];
+    
+    // Header
+    lines.push(`# ${song.title}`);
+    if (song.artist) {
+      lines.push(`**Исполнитель:** ${song.artist}`);
+    }
+    lines.push('');
+
+    // Blocks
+    blocks.forEach((block, blockIndex) => {
+      const blockTitle = block.title || `Блок ${blockIndex + 1}`;
+      
+      if (block.block_type === 'chords') {
+        lines.push(`## ${blockTitle}`);
+        lines.push('');
+        lines.push('```chords');
+        const content = isChordsContent(block.content) ? block.content : { text: '' };
+        lines.push(content.text);
+        lines.push('```');
+        lines.push('');
+      } else {
+        lines.push(`## ${blockTitle}`);
+        lines.push('');
+        const content = isTablatureContent(block.content) ? block.content : { lines: [] };
+        
+        content.lines.forEach((tabLine, lineIndex) => {
+          if (tabLine.title) {
+            lines.push(`### ${tabLine.title}`);
+          } else if (content.lines.length > 1) {
+            lines.push(`### Часть ${lineIndex + 1}`);
+          }
+          
+          // Store connections as HTML comment
+          if (tabLine.connections && tabLine.connections.length > 0) {
+            lines.push(`<!-- connections: ${serializeConnections(tabLine.connections)} -->`);
+          }
+          
+          lines.push('```tab');
+          lines.push(...formatTabLine(tabLine));
+          lines.push('```');
+          lines.push('');
+        });
+      }
     });
 
     return lines.join('\n');
@@ -308,15 +367,23 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
     }
   };
 
-  const handleCopy = async () => {
+  const handleCopyTxt = async () => {
     const text = exportToText();
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success('Песня скопирована в буфер обмена');
+    setCopiedTxt(true);
+    setTimeout(() => setCopiedTxt(false), 2000);
+    toast.success('Текст скопирован');
   };
 
-  const handleDownload = () => {
+  const handleCopyMd = async () => {
+    const text = exportToMarkdown();
+    await navigator.clipboard.writeText(text);
+    setCopiedMd(true);
+    setTimeout(() => setCopiedMd(false), 2000);
+    toast.success('Markdown скопирован');
+  };
+
+  const handleDownloadTxt = () => {
     const text = exportToText();
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -328,7 +395,22 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
     a.download = `${fileName}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Файл загружен');
+    toast.success('Файл .txt скачан');
+  };
+
+  const handleDownloadMd = () => {
+    const text = exportToMarkdown();
+    const blob = new Blob([text], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileName = song.artist 
+      ? `${song.artist} - ${song.title}`.replace(/[^a-zA-Zа-яА-Я0-9\s\-]/g, '').replace(/\s+/g, '_')
+      : song.title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+    a.download = `${fileName}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Файл .md скачан');
   };
 
   const handleImport = () => {
@@ -356,6 +438,7 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
   };
 
   const exportText = exportToText();
+  const exportMarkdown = exportToMarkdown();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -373,11 +456,15 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="export">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="export" className="gap-2">
+        <Tabs defaultValue="txt">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="txt" className="gap-2">
+              <Copy className="w-4 h-4" />
+              TXT
+            </TabsTrigger>
+            <TabsTrigger value="markdown" className="gap-2">
               <Download className="w-4 h-4" />
-              Экспорт
+              Markdown
             </TabsTrigger>
             <TabsTrigger value="import" className="gap-2">
               <Upload className="w-4 h-4" />
@@ -385,9 +472,9 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="export" className="space-y-4">
+          <TabsContent value="txt" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Полный экспорт песни со всеми блоками (аккорды и табулатуры)
+              Простой текстовый формат для чатов и форумов
             </p>
             <Textarea
               value={exportText}
@@ -395,13 +482,34 @@ export function FullSongExportImportDialog({ song, blocks, onImport }: FullSongE
               className="font-mono text-xs h-64 resize-none"
             />
             <div className="flex gap-2">
-              <Button onClick={handleCopy} variant="outline" className="gap-2">
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Скопировано' : 'Копировать'}
+              <Button onClick={handleCopyTxt} variant="outline" className="gap-2">
+                {copiedTxt ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedTxt ? 'Скопировано' : 'Копировать'}
               </Button>
-              <Button onClick={handleDownload} className="gap-2">
+              <Button onClick={handleDownloadTxt} variant="secondary" className="gap-2">
                 <Download className="w-4 h-4" />
                 Скачать .txt
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="markdown" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Формат с разметкой для GitHub, Notion и повторного импорта
+            </p>
+            <Textarea
+              value={exportMarkdown}
+              readOnly
+              className="font-mono text-xs h-64 resize-none"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleCopyMd} variant="outline" className="gap-2">
+                {copiedMd ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedMd ? 'Скопировано' : 'Копировать'}
+              </Button>
+              <Button onClick={handleDownloadMd} className="gap-2">
+                <Download className="w-4 h-4" />
+                Скачать .md
               </Button>
             </div>
           </TabsContent>

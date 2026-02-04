@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { HarmonicaTab, HarmonicaTabContent, createEmptyHarmonicaLine } from '@/types/harmonica';
 import { HarmonicaTabEditor } from './HarmonicaTabEditor';
 import { HarmonicaTabViewer } from './HarmonicaTabViewer';
+import { HarmonicaExportImportDialog } from './HarmonicaExportImportDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Loader2, Eye, Pencil } from 'lucide-react';
@@ -73,32 +74,44 @@ export function EditHarmonicaTabView({
           />
         </div>
 
-        <div className="flex gap-1 p-1 bg-muted rounded-lg">
-          <Button
-            variant={isViewMode ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setIsViewMode(true)}
-            className={`gap-2 ${isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
-          >
-            <Eye className="w-4 h-4" />
-            Просмотр
-          </Button>
-          <Button
-            variant={!isViewMode ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setIsViewMode(false)}
-            className={`gap-2 ${!isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
-          >
-            <Pencil className="w-4 h-4" />
-            Редактор
-          </Button>
-        </div>
-        {(isSaving || isSavingState) && (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Сохранение...
+        <div className="flex items-center gap-3">
+          {(isSaving || isSavingState) && (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Сохранение...
+            </div>
+          )}
+          
+          <HarmonicaExportImportDialog
+            title={title}
+            content={content}
+            onImport={(newTitle, newContent) => {
+              setTitle(newTitle);
+              setContent(newContent);
+            }}
+          />
+
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            <Button
+              variant={isViewMode ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setIsViewMode(true)}
+              className={`gap-2 ${isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
+            >
+              <Eye className="w-4 h-4" />
+              Просмотр
+            </Button>
+            <Button
+              variant={!isViewMode ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setIsViewMode(false)}
+              className={`gap-2 ${!isViewMode ? "shadow-md font-semibold" : "opacity-60"}`}
+            >
+              <Pencil className="w-4 h-4" />
+              Редактор
+            </Button>
           </div>
-        )}
+        </div>
       </div>
 
       {isViewMode ? (
