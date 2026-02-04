@@ -8,10 +8,19 @@ export interface HarmonicaNote {
   position: number; // horizontal position in the line
 }
 
+// Group of notes played simultaneously (chord)
+export interface HarmonicaChord {
+  id: string;
+  notes: HarmonicaNote[]; // Multiple notes at same position
+  position: number; // Position of the chord (takes position of first note)
+  span: number; // How many cells this chord spans visually
+}
+
 export interface HarmonicaLine {
   id: string;
   title: string;
   notes: HarmonicaNote[];
+  chords: HarmonicaChord[]; // Grouped notes
   columns: number; // number of positions in the line
 }
 
@@ -36,6 +45,7 @@ export const createEmptyHarmonicaLine = (): HarmonicaLine => ({
   id: crypto.randomUUID(),
   title: '',
   notes: [],
+  chords: [],
   columns: 16,
 });
 
@@ -53,11 +63,36 @@ export const createHarmonicaNote = (
   position,
 });
 
+// Helper to create a chord from notes
+export const createHarmonicaChord = (
+  notes: HarmonicaNote[],
+  position: number,
+  span: number
+): HarmonicaChord => ({
+  id: crypto.randomUUID(),
+  notes,
+  position,
+  span,
+});
+
 // Format note for display: 1, -3, -3', -3'', etc. (blow = just number, draw = minus)
 export const formatHarmonicaNote = (note: HarmonicaNote): string => {
   const prefix = note.direction === 'blow' ? '' : '-';
   const bendMarks = "'".repeat(note.bend);
   return `${prefix}${note.hole}${bendMarks}`;
+};
+
+// Format chord for display: "234" or "-234" (all notes must have same direction)
+export const formatHarmonicaChord = (chord: HarmonicaChord): string => {
+  if (chord.notes.length === 0) return '';
+  
+  // Sort notes by hole number
+  const sortedNotes = [...chord.notes].sort((a, b) => a.hole - b.hole);
+  const direction = sortedNotes[0].direction;
+  const prefix = direction === 'blow' ? '' : '-';
+  const holes = sortedNotes.map(n => n.hole).join('');
+  
+  return `${prefix}${holes}`;
 };
 
 // Parse note string to components: "1" or "+1" -> blow, "-3" -> draw
