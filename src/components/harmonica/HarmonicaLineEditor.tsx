@@ -46,6 +46,8 @@ export function HarmonicaLineEditor({
   const isMultiSelect = selectedPositions.size > 1;
   const activePosition = selectedPositions.size === 1 ? Array.from(selectedPositions)[0] : null;
 
+  const isExtendSelect = (e: { metaKey?: boolean; ctrlKey?: boolean }) => Boolean(e?.metaKey || e?.ctrlKey);
+
   // Build a map of position -> chord for quick lookup
   const chordAtPosition = useMemo(() => {
     const map = new Map<number, HarmonicaChord>();
@@ -74,9 +76,9 @@ export function HarmonicaLineEditor({
     return line.notes.find((n) => n.position === position);
   };
 
-  // Handle cell click with shift for multi-select
-  const handleCellClick = (position: number, shiftKey: boolean) => {
-    if (shiftKey && selectedPositions.size > 0) {
+  // Handle cell click with modifier (Cmd on macOS / Ctrl on Windows) for multi-select
+  const handleCellClick = (position: number, extendSelection: boolean) => {
+    if (extendSelection && selectedPositions.size > 0) {
       // Extend selection
       const positions = Array.from(selectedPositions);
       const minPos = Math.min(...positions, position);
@@ -271,7 +273,13 @@ export function HarmonicaLineEditor({
                 : 'border-border bg-accent/30 hover:border-primary/50',
             )}
             style={{ width: `${chord.span * 48 + (chord.span - 1) * 4}px` }}
-            onClick={(e) => handleCellClick(position, e.shiftKey)}
+            onPointerDown={(e) => {
+              if (isExtendSelect(e)) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            onClick={(e) => handleCellClick(position, isExtendSelect(e))}
           >
             <span className={cn(
               'font-semibold text-base',
@@ -302,15 +310,20 @@ export function HarmonicaLineEditor({
         
         const cellButton = (
           <button
-            onClick={(e) => {
-              // For Shift+click, prevent default and just handle selection
-              if (e.shiftKey) {
+            onPointerDown={(e) => {
+              // DropdownMenu opens on pointer down; prevent it when doing multi-select
+              if (isExtendSelect(e)) {
                 e.preventDefault();
                 e.stopPropagation();
-                handleCellClick(currentPos, true);
-                return;
               }
-              handleCellClick(currentPos, false);
+            }}
+            onClick={(e) => {
+              const extend = isExtendSelect(e);
+              if (extend) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+              handleCellClick(currentPos, extend);
             }}
             className={cn(
               'w-12 h-10 flex items-center justify-center rounded border text-sm font-mono transition-all',
