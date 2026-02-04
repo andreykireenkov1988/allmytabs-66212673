@@ -300,115 +300,137 @@ export function HarmonicaLineEditor({
         const isSelected = selectedPositions.has(position);
         const currentPos = position;
         
-        cells.push(
-          <DropdownMenu key={position}>
-            <DropdownMenuTrigger asChild>
-              <button
-                onClick={(e) => handleCellClick(currentPos, e.shiftKey)}
-                className={cn(
-                  'w-12 h-10 flex items-center justify-center rounded border text-sm font-mono transition-all',
-                  isSelected
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary'
-                    : 'border-border hover:border-primary/50 hover:bg-muted/50',
-                  note && !isSelected && 'bg-secondary/50'
-                )}
-              >
-                {note ? (
-                  <span className={cn(
-                    'font-semibold',
-                    note.direction === 'blow' ? 'text-primary' : 'text-secondary-foreground'
-                  )}>
-                    {formatHarmonicaNote(note)}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/30">•</span>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
-              <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                Выдох
-              </div>
-              {HARMONICA_HOLES.map((hole) => (
-                <DropdownMenuItem
-                  key={`blow-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'blow')}
-                  className="font-mono cursor-pointer"
-                >
-                  {hole}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                Вдох (-)
-              </div>
-              {HARMONICA_HOLES.map((hole) => (
-                <DropdownMenuItem
-                  key={`draw-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw')}
-                  className="font-mono cursor-pointer"
-                >
-                  -{hole}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                Бенды вдоха
-              </div>
-              {[1, 2, 3, 4, 5, 6].map((hole) => (
-                <DropdownMenuItem
-                  key={`bend1-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 1)}
-                  className="font-mono cursor-pointer"
-                >
-                  -{hole}'
-                </DropdownMenuItem>
-              ))}
-              {[2, 3].map((hole) => (
-                <DropdownMenuItem
-                  key={`bend2-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 2)}
-                  className="font-mono cursor-pointer"
-                >
-                  -{hole}''
-                </DropdownMenuItem>
-              ))}
-              {[3].map((hole) => (
-                <DropdownMenuItem
-                  key={`bend3-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 3)}
-                  className="font-mono cursor-pointer"
-                >
-                  -{hole}'''
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
-                Бенды выдоха (overblow)
-              </div>
-              {[8, 9, 10].map((hole) => (
-                <DropdownMenuItem
-                  key={`overblow-${hole}`}
-                  onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'blow', 1)}
-                  className="font-mono cursor-pointer"
-                >
-                  {hole}'
-                </DropdownMenuItem>
-              ))}
-              {note && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={() => handleDeleteNote(currentPos)}
-                    className="text-destructive focus:text-destructive cursor-pointer"
-                  >
-                    Удалить ноту
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        const cellButton = (
+          <button
+            onClick={(e) => {
+              // For Shift+click, prevent default and just handle selection
+              if (e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCellClick(currentPos, true);
+                return;
+              }
+              handleCellClick(currentPos, false);
+            }}
+            className={cn(
+              'w-12 h-10 flex items-center justify-center rounded border text-sm font-mono transition-all',
+              isSelected
+                ? 'border-primary bg-primary/10 ring-2 ring-primary'
+                : 'border-border hover:border-primary/50 hover:bg-muted/50',
+              note && !isSelected && 'bg-secondary/50'
+            )}
+          >
+            {note ? (
+              <span className={cn(
+                'font-semibold',
+                note.direction === 'blow' ? 'text-primary' : 'text-secondary-foreground'
+              )}>
+                {formatHarmonicaNote(note)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground/30">•</span>
+            )}
+          </button>
         );
+
+        // If we're in multi-select mode, don't wrap in dropdown
+        if (isMultiSelect) {
+          cells.push(
+            <div key={position}>
+              {cellButton}
+            </div>
+          );
+        } else {
+          cells.push(
+            <DropdownMenu key={position}>
+              <DropdownMenuTrigger asChild>
+                {cellButton}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-80 overflow-y-auto bg-popover border border-border shadow-lg z-50">
+                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
+                  Выдох
+                </div>
+                {HARMONICA_HOLES.map((hole) => (
+                  <DropdownMenuItem
+                    key={`blow-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'blow')}
+                    className="font-mono cursor-pointer"
+                  >
+                    {hole}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
+                  Вдох (-)
+                </div>
+                {HARMONICA_HOLES.map((hole) => (
+                  <DropdownMenuItem
+                    key={`draw-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw')}
+                    className="font-mono cursor-pointer"
+                  >
+                    -{hole}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
+                  Бенды вдоха
+                </div>
+                {[1, 2, 3, 4, 5, 6].map((hole) => (
+                  <DropdownMenuItem
+                    key={`bend1-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 1)}
+                    className="font-mono cursor-pointer"
+                  >
+                    -{hole}'
+                  </DropdownMenuItem>
+                ))}
+                {[2, 3].map((hole) => (
+                  <DropdownMenuItem
+                    key={`bend2-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 2)}
+                    className="font-mono cursor-pointer"
+                  >
+                    -{hole}''
+                  </DropdownMenuItem>
+                ))}
+                {[3].map((hole) => (
+                  <DropdownMenuItem
+                    key={`bend3-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'draw', 3)}
+                    className="font-mono cursor-pointer"
+                  >
+                    -{hole}'''
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">
+                  Бенды выдоха (overblow)
+                </div>
+                {[8, 9, 10].map((hole) => (
+                  <DropdownMenuItem
+                    key={`overblow-${hole}`}
+                    onSelect={() => handleAddNoteFromMenu(currentPos, hole, 'blow', 1)}
+                    className="font-mono cursor-pointer"
+                  >
+                    {hole}'
+                  </DropdownMenuItem>
+                ))}
+                {note && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => handleDeleteNote(currentPos)}
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                    >
+                      Удалить ноту
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        }
         position++;
       } else {
         // Skip positions that are part of a chord but not the start
