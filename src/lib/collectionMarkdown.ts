@@ -262,6 +262,7 @@ function parseHarmonicaLine(content: string, notesComment?: string): HarmonicaLi
           id: crypto.randomUUID(),
           title: '',
           notes: notes.map(n => ({ ...n, id: crypto.randomUUID() })),
+          chords: [],
           columns: Math.max(16, ...notes.map(n => n.position + 1)),
         };
       } catch {}
@@ -292,6 +293,7 @@ function parseHarmonicaLine(content: string, notesComment?: string): HarmonicaLi
     id: crypto.randomUUID(),
     title: '',
     notes,
+    chords: [],
     columns: Math.max(16, parts.length),
   };
 }
@@ -391,6 +393,7 @@ export function parseMarkdown(markdown: string): ParsedCollection {
           id: crypto.randomUUID(),
           title: '',
           notes: [],
+          chords: [],
           columns: 16,
         });
       }
