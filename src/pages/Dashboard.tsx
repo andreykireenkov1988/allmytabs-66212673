@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSongs } from '@/hooks/useSongs';
 import { useHarmonicaTabs } from '@/hooks/useHarmonicaTabs';
@@ -6,33 +7,24 @@ import { useCollections } from '@/hooks/useCollections';
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { SongCard } from '@/components/song/SongCard';
 import { ImportSongDialog } from '@/components/song/ImportSongDialog';
-import { UnifiedSongEditor } from '@/components/song/UnifiedSongEditor';
-import { HarmonicaTabCard } from '@/components/harmonica/HarmonicaTabCard';
 import { CreateHarmonicaTabDialog } from '@/components/harmonica/CreateHarmonicaTabDialog';
-import { EditHarmonicaTabView } from '@/components/harmonica/EditHarmonicaTabView';
 import { ContentTable } from '@/components/dashboard/ContentTable';
-import { ViewModeToggle, ViewMode } from '@/components/dashboard/ViewModeToggle';
 import { CreateCollectionDialog } from '@/components/collection/CreateCollectionDialog';
 import { CollectionExportImportDialog } from '@/components/collection/CollectionExportImportDialog';
-import { MoveToCollectionDialog } from '@/components/collection/MoveToCollectionDialog';
 import { DeleteCollectionDialog } from '@/components/collection/DeleteCollectionDialog';
-import { Song, ParsedSongData, ChordsBlockContent } from '@/types/song';
-import { HarmonicaTab, HarmonicaTabContent } from '@/types/harmonica';
-import { TablatureContent } from '@/types/tablature';
+import { Song, ParsedSongData } from '@/types/song';
+import { HarmonicaTab } from '@/types/harmonica';
 import { toast } from 'sonner';
-import { Music, Loader2, Guitar, Wind, Search, FolderOpen, Trash2 } from 'lucide-react';
+import { Music, Loader2, Guitar, Wind, Search, FolderOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     user
   } = useAuth();
@@ -58,15 +50,30 @@ export default function Dashboard() {
     createCollection,
     deleteCollection
   } = useCollections(user?.id);
-  const [editingSong, setEditingSong] = useState<Song | null>(null);
-  const [editingHarmonicaTab, setEditingHarmonicaTab] = useState<HarmonicaTab | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('tiles');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
-  const [generatingSongId, setGeneratingSongId] = useState<string | null>(null);
-  const [generatingHarmonicaId, setGeneratingHarmonicaId] = useState<string | null>(null);
+
+  // Get collection filter from URL
+  const selectedCollectionId = searchParams.get('collection') || null;
+
+  const setSelectedCollectionId = (id: string | null) => {
+    if (id) {
+      setSearchParams({ collection: id });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  // Navigation handlers
+  const handleEditSong = (song: Song) => {
+    navigate(`/song/${song.id}`);
+  };
+
+  const handleEditHarmonicaTab = (tab: HarmonicaTab) => {
+    navigate(`/harmonica/${tab.id}`);
+  };
+
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value);
   }, 300);
@@ -150,7 +157,7 @@ export default function Dashboard() {
         userId: user.id,
         collectionId: selectedCollectionId
       });
-      setEditingSong(newSong);
+      navigate(`/song/${newSong.id}`);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка создания песни');
     }
@@ -163,7 +170,7 @@ export default function Dashboard() {
         userId: user.id,
         collectionId: selectedCollectionId
       });
-      setEditingSong(newSong);
+      navigate(`/song/${newSong.id}`);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка создания песни');
     }
@@ -213,18 +220,6 @@ export default function Dashboard() {
       toast.error(error.message || 'Ошибка создания');
     }
   };
-  const handleSaveHarmonicaTab = async (id: string, title: string, content: HarmonicaTabContent) => {
-    try {
-      await updateHarmonicaTab.mutateAsync({
-        id,
-        title,
-        content
-      });
-      toast.success('Сохранено!');
-    } catch (error: any) {
-      toast.error(error.message || 'Ошибка сохранения');
-    }
-  };
   const handleDeleteHarmonicaTab = async (id: string) => {
     try {
       await deleteHarmonicaTab.mutateAsync(id);
@@ -242,32 +237,6 @@ export default function Dashboard() {
       toast.success('Перемещено!');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка перемещения');
-    }
-  };
-
-  // Handlers for image generation
-  const handleGenerateSongImage = async (song: Song) => {
-    setGeneratingSongId(song.id);
-    try {
-      await generateSongImage.mutateAsync({
-        id: song.id,
-        title: song.title,
-        artist: song.artist
-      });
-    } finally {
-      setGeneratingSongId(null);
-    }
-  };
-  const handleGenerateHarmonicaImage = async (tab: HarmonicaTab) => {
-    setGeneratingHarmonicaId(tab.id);
-    try {
-      await generateHarmonicaImage.mutateAsync({
-        id: tab.id,
-        title: tab.title,
-        artist: tab.artist
-      });
-    } finally {
-      setGeneratingHarmonicaId(null);
     }
   };
 
@@ -348,48 +317,6 @@ export default function Dashboard() {
     window.location.reload();
   };
 
-  // Editing views
-  if (editingSong) {
-    const songCollection = collections.find(c => c.id === editingSong.collection_id);
-    const breadcrumbItems = [
-      { label: 'Все табы', onClick: () => setEditingSong(null) },
-      ...(songCollection ? [{ label: songCollection.name, onClick: () => { setEditingSong(null); setSelectedCollectionId(songCollection.id); } }] : []),
-      { label: editingSong.title }
-    ];
-    
-    return <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="container mx-auto px-4 py-8 flex-1">
-          <Breadcrumbs items={breadcrumbItems} />
-          <UnifiedSongEditor song={editingSong} onBack={() => setEditingSong(null)} onSaveSong={handleSaveSong} isSaving={updateSong.isPending} />
-        </main>
-        <Footer />
-      </div>;
-  }
-  if (editingHarmonicaTab) {
-    const tabCollection = collections.find(c => c.id === editingHarmonicaTab.collection_id);
-    const breadcrumbItems = [
-      { label: 'Все табы', onClick: () => setEditingHarmonicaTab(null) },
-      ...(tabCollection ? [{ label: tabCollection.name, onClick: () => { setEditingHarmonicaTab(null); setSelectedCollectionId(tabCollection.id); } }] : []),
-      { label: editingHarmonicaTab.title }
-    ];
-    
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
-        <main className="container mx-auto px-4 py-8 flex-1">
-          <Breadcrumbs items={breadcrumbItems} />
-          <EditHarmonicaTabView
-            tab={editingHarmonicaTab}
-            onBack={() => setEditingHarmonicaTab(null)}
-            onSave={handleSaveHarmonicaTab}
-            isSaving={updateHarmonicaTab.isPending}
-          />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
   const totalCount = filteredSongs.length + filteredHarmonicaTabs.length;
   const isEmpty = songs.length === 0 && harmonicaTabs.length === 0;
   const noResults = totalCount === 0 && (searchQuery.trim() !== '' || selectedCollectionId !== null);
@@ -469,7 +396,7 @@ export default function Dashboard() {
             <TabsContent value={activeTab} className="mt-0">
               {noResults ? <div className="text-center py-12 text-muted-foreground">
                   {searchQuery.trim() ? `Ничего не найдено по запросу «${searchQuery}»` : 'В этой коллекции пока ничего нет'}
-                </div> : <ContentTable tablatures={[]} harmonicaTabs={filteredHarmonicaTabs} songs={filteredSongs} showTabs={false} showHarmonica={showHarmonica} showSongs={showSongs} onEditTab={() => {}} onDeleteTab={() => {}} onEditHarmonicaTab={setEditingHarmonicaTab} onDeleteHarmonicaTab={handleDeleteHarmonicaTab} onEditSong={setEditingSong} onDeleteSong={handleDeleteSong} collections={collections} onMoveSong={handleMoveSong} onMoveHarmonicaTab={handleMoveHarmonicaTab} />}
+                </div> : <ContentTable tablatures={[]} harmonicaTabs={filteredHarmonicaTabs} songs={filteredSongs} showTabs={false} showHarmonica={showHarmonica} showSongs={showSongs} onEditTab={() => {}} onDeleteTab={() => {}} onEditHarmonicaTab={handleEditHarmonicaTab} onDeleteHarmonicaTab={handleDeleteHarmonicaTab} onEditSong={handleEditSong} onDeleteSong={handleDeleteSong} collections={collections} onMoveSong={handleMoveSong} onMoveHarmonicaTab={handleMoveHarmonicaTab} />}
             </TabsContent>
           </Tabs>}
       </main>
