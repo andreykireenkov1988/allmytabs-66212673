@@ -1,4 +1,4 @@
-import { TablatureConnection } from '@/types/tablature';
+import { TablatureConnection, TablatureNote, BendSize } from '@/types/tablature';
 
 interface ConnectionRendererProps {
   connections: TablatureConnection[];
@@ -7,6 +7,7 @@ interface ConnectionRendererProps {
   cellHeight: number;
   selectedConnectionId?: string | null;
   onConnectionClick?: (connectionId: string) => void;
+  notes?: TablatureNote[];
 }
 
 export function ConnectionRenderer({ 
@@ -15,15 +16,27 @@ export function ConnectionRenderer({
   cellWidth, 
   cellHeight,
   selectedConnectionId,
-  onConnectionClick
+  onConnectionClick,
+  notes = []
 }: ConnectionRendererProps) {
   const stringConnections = connections.filter(c => c.stringIndex === stringIndex);
+  const stringNotes = notes.filter(n => n.stringIndex === stringIndex && n.bend);
   
-  if (stringConnections.length === 0) return null;
+  if (stringConnections.length === 0 && stringNotes.length === 0) return null;
 
   const handleClick = (e: React.MouseEvent, connectionId: string) => {
     e.stopPropagation();
     onConnectionClick?.(connectionId);
+  };
+
+  const getBendLabel = (bend: BendSize): string => {
+    switch (bend) {
+      case '1/4': return '¼';
+      case '1/2': return '½';
+      case 'full': return '1';
+      case '1.5': return '1½';
+      default: return '';
+    }
   };
 
   return (
@@ -31,6 +44,46 @@ export function ConnectionRenderer({
       className="absolute inset-0 pointer-events-none overflow-visible"
       style={{ width: '100%', height: cellHeight }}
     >
+      {/* Render bend indicators for notes */}
+      {stringNotes.map((note) => {
+        const x = note.position * cellWidth + cellWidth / 2;
+        const centerY = cellHeight / 2;
+        const bendLabel = getBendLabel(note.bend!);
+        
+        return (
+          <g key={`bend-${note.position}`}>
+            {/* Bend arrow */}
+            <path
+              d={`M ${x} ${centerY + 4} Q ${x + 6} ${centerY - 8} ${x + 10} ${centerY - 10}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="text-accent-foreground"
+            />
+            {/* Arrow head */}
+            <path
+              d={`M ${x + 7} ${centerY - 12} L ${x + 10} ${centerY - 10} L ${x + 7} ${centerY - 6}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-accent-foreground"
+            />
+            {/* Bend size label */}
+            <text
+              x={x + 12}
+              y={centerY - 8}
+              className="text-accent-foreground fill-current"
+              fontSize="8"
+              fontWeight="bold"
+            >
+              {bendLabel}
+            </text>
+          </g>
+        );
+      })}
+
       {stringConnections.map((conn) => {
         const startX = conn.startPosition * cellWidth + cellWidth / 2;
         const endX = conn.endPosition * cellWidth + cellWidth / 2;
@@ -99,33 +152,6 @@ export function ConnectionRenderer({
                 stroke="currentColor"
                 strokeWidth={strokeWidth}
                 className={isSelected ? 'text-destructive' : 'text-primary'}
-              />
-            </g>
-          );
-        } else if (conn.type === 'bend') {
-          const arrowSize = 4;
-          
-          return (
-            <g key={conn.id} className={`pointer-events-auto cursor-pointer ${isSelected ? 'text-destructive' : 'text-accent-foreground'}`} onClick={(e) => handleClick(e, conn.id)}>
-              <path
-                d={`M ${startX} ${centerY + 4} Q ${midX} ${centerY - 10} ${endX} ${centerY - 8}`}
-                fill="none"
-                stroke="transparent"
-                strokeWidth="12"
-              />
-              <path
-                d={`M ${startX} ${centerY + 4} Q ${midX} ${centerY - 10} ${endX} ${centerY - 8}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={strokeWidth}
-              />
-              <path
-                d={`M ${endX - arrowSize} ${centerY - 8 - arrowSize} L ${endX} ${centerY - 8} L ${endX - arrowSize} ${centerY - 8 + arrowSize}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                strokeLinejoin="round"
               />
             </g>
           );

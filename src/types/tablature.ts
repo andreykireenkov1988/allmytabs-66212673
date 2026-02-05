@@ -2,9 +2,12 @@ export interface TablatureNote {
   stringIndex: number; // 0-5 (E, B, G, D, A, E)
   position: number; // horizontal position
   fret: string; // can be number, letter, or symbol
+  bend?: BendSize; // optional bend size
 }
 
-export type ConnectionType = 'hammer-on' | 'pull-off' | 'slide' | 'bend';
+export type BendSize = '1/4' | '1/2' | 'full' | '1.5';
+
+export type ConnectionType = 'hammer-on' | 'pull-off' | 'slide';
 
 export interface TablatureConnection {
   id: string;
@@ -58,3 +61,10 @@ export const createConnection = (
   startPosition,
   endPosition,
 });
+
+export const BEND_SIZES: { value: BendSize; label: string }[] = [
+  { value: '1/4', label: '1/4' },
+  { value: '1/2', label: '1/2' },
+  { value: 'full', label: 'Full' },
+  { value: '1.5', label: '1½' },
+];

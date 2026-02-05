@@ -44,6 +44,7 @@ export function TabViewer({ content }: TabViewerProps) {
                     cellHeight={CELL_HEIGHT}
                     selectedConnectionId={null}
                     onConnectionClick={() => {}}
+                    notes={line.notes}
                   />
                   
                   {/* Fret values */}

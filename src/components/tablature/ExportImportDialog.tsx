@@ -20,14 +20,12 @@ const CONNECTION_SYMBOLS: Record<ConnectionType, string> = {
   'hammer-on': 'h',
   'pull-off': 'p',
   'slide': '/',
-  'bend': 'b',
 };
 
 const SYMBOL_TO_CONNECTION: Record<string, ConnectionType> = {
   'h': 'hammer-on',
   'p': 'pull-off',
   '/': 'slide',
-  'b': 'bend',
 };
 
 interface ExportImportDialogProps {
