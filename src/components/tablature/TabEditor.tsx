@@ -1,5 +1,5 @@
 import { useState, useCallback, DragEvent, KeyboardEvent, useRef } from 'react';
-import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, TablatureConnection, ConnectionType, createEmptyLine, createConnection } from '@/types/tablature';
+import { STRING_NAMES, TablatureContent, TablatureLine, TablatureNote, TablatureConnection, ConnectionType, BendSize, createEmptyLine, createConnection } from '@/types/tablature';
 import { Plus, Minus, GripVertical, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,6 +162,54 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
   const clearSelection = () => setSelectedNotes([]);
 
   const canAddConnection = selectedNotes.length === 2;
+  const singleNoteSelected = selectedNotes.length === 1;
+
+  // Get the bend status of the single selected note
+  const getSelectedNoteBend = (): BendSize | undefined => {
+    if (!singleNoteSelected) return undefined;
+    const sel = selectedNotes[0];
+    const line = content.lines.find((l) => l.id === sel.lineId);
+    if (!line) return undefined;
+    const note = line.notes.find((n) => n.stringIndex === sel.stringIndex && n.position === sel.position);
+    return note?.bend;
+  };
+
+  const selectedNoteBend = getSelectedNoteBend();
+
+  const addBendToNote = (size: BendSize) => {
+    if (!singleNoteSelected) return;
+    const sel = selectedNotes[0];
+    const line = content.lines.find((l) => l.id === sel.lineId);
+    if (!line) return;
+    
+    const newNotes = line.notes.map((n) => {
+      if (n.stringIndex === sel.stringIndex && n.position === sel.position) {
+        return { ...n, bend: size };
+      }
+      return n;
+    });
+    
+    updateLine(sel.lineId, { notes: newNotes });
+    clearSelection();
+  };
+
+  const removeBendFromNote = () => {
+    if (!singleNoteSelected) return;
+    const sel = selectedNotes[0];
+    const line = content.lines.find((l) => l.id === sel.lineId);
+    if (!line) return;
+    
+    const newNotes = line.notes.map((n) => {
+      if (n.stringIndex === sel.stringIndex && n.position === sel.position) {
+        const { bend, ...rest } = n;
+        return rest;
+      }
+      return n;
+    });
+    
+    updateLine(sel.lineId, { notes: newNotes });
+    clearSelection();
+  };
 
   // Find existing connection between selected notes
   const getExistingConnectionBetweenSelected = (): { lineId: string; connectionId: string } | null => {
@@ -422,10 +470,14 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
               <ConnectionControls 
                 onAddConnection={addConnection}
                 disabled={!canAddConnection || !!existingConnectionBetweenSelected}
+                singleNoteSelected={singleNoteSelected}
+                onAddBend={addBendToNote}
+                hasBend={!!selectedNoteBend}
+                onRemoveBend={removeBendFromNote}
               />
               {selectedNotes.length === 1 && (
                 <span className="text-xs text-muted-foreground">
-                  Ctrl+клик на вторую ноту
+                  Выберите бенд или Ctrl+клик на вторую ноту для связи
                 </span>
               )}
               {canAddConnection && existingConnectionBetweenSelected && (
@@ -453,6 +505,7 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
                     cellHeight={CELL_HEIGHT}
                     selectedConnectionId={selectedConnection?.lineId === line.id ? selectedConnection.connectionId : null}
                     onConnectionClick={(connId) => handleConnectionClick(line.id, connId)}
+                    notes={line.notes}
                   />
                   
                   {/* Fret inputs */}
