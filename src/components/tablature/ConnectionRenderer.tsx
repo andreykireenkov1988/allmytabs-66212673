@@ -52,30 +52,33 @@ export function ConnectionRenderer({
         
         return (
           <g key={`bend-${note.position}`}>
-            {/* Bend arrow */}
-            <path
-              d={`M ${x} ${centerY + 4} Q ${x + 6} ${centerY - 8} ${x + 10} ${centerY - 10}`}
-              fill="none"
+            {/* Simple vertical line with arrow */}
+            <line
+              x1={x + 8}
+              y1={centerY + 2}
+              x2={x + 8}
+              y2={centerY - 10}
               stroke="currentColor"
               strokeWidth="1.5"
-              className="text-accent-foreground"
+              className="text-primary"
             />
-            {/* Arrow head */}
-            <path
-              d={`M ${x + 7} ${centerY - 12} L ${x + 10} ${centerY - 10} L ${x + 7} ${centerY - 6}`}
+            {/* Arrow head pointing up */}
+            <polyline
+              points={`${x + 5},${centerY - 7} ${x + 8},${centerY - 11} ${x + 11},${centerY - 7}`}
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-accent-foreground"
+              className="text-primary"
             />
-            {/* Bend size label */}
+            {/* Bend size label above the arrow */}
             <text
-              x={x + 12}
-              y={centerY - 8}
-              className="text-accent-foreground fill-current"
-              fontSize="8"
+              x={x + 8}
+              y={centerY - 14}
+              textAnchor="middle"
+              className="text-primary fill-current"
+              fontSize="7"
               fontWeight="bold"
             >
               {bendLabel}
