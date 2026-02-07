@@ -17,11 +17,17 @@ export interface TablatureConnection {
   endPosition: number;
 }
 
+export interface TablatureChord {
+  position: number;
+  chord: string;
+}
+
 export interface TablatureLine {
   id: string;
   title: string;
   notes: TablatureNote[];
   connections: TablatureConnection[];
+  chords: TablatureChord[];
   columns: number;
 }
 
@@ -46,6 +52,7 @@ export const createEmptyLine = (): TablatureLine => ({
   title: '',
   notes: [],
   connections: [],
+  chords: [],
   columns: 16,
 });
 

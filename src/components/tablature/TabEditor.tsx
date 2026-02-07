@@ -490,6 +490,45 @@ export function TabEditor({ content, onChange }: TabEditorProps) {
 
           {/* Tab grid */}
           <div className="inline-block min-w-full">
+            {/* Chord row above strings */}
+            <div className="flex items-center gap-0 mb-1">
+              <span className="string-label text-xs text-muted-foreground"> </span>
+              <div className="flex">
+                {Array.from({ length: line.columns }).map((_, position) => {
+                  const chordEntry = (line.chords || []).find(c => c.position === position);
+                  return (
+                    <input
+                      key={`chord-${position}`}
+                      type="text"
+                      maxLength={8}
+                      value={chordEntry?.chord ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const existingChords = line.chords || [];
+                        let newChords;
+                        if (value === '') {
+                          newChords = existingChords.filter(c => c.position !== position);
+                        } else {
+                          const idx = existingChords.findIndex(c => c.position === position);
+                          if (idx >= 0) {
+                            newChords = [...existingChords];
+                            newChords[idx] = { position, chord: value };
+                          } else {
+                            newChords = [...existingChords, { position, chord: value }];
+                          }
+                        }
+                        updateLine(line.id, { chords: newChords });
+                      }}
+                      className="text-center text-xs font-semibold text-primary bg-transparent border-none outline-none focus:bg-primary/10 rounded-sm"
+                      style={{ width: CELL_WIDTH, height: 20 }}
+                      placeholder=""
+                      title="Аккорд"
+                    />
+                  );
+                })}
+              </div>
+            </div>
+
             {STRING_NAMES.map((stringName, stringIndex) => (
               <div key={stringIndex} className="flex items-center gap-0 mb-1">
                 <span className="string-label">{stringName}</span>
