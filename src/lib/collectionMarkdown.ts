@@ -247,6 +247,7 @@ function parseTablatureBlock(content: string, connectionComments: string[]): Tab
     title: '',
     notes,
     connections,
+    chords: [],
     columns,
   };
 }

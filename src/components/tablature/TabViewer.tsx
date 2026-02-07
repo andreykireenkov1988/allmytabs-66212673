@@ -29,6 +29,27 @@ export function TabViewer({ content }: TabViewerProps) {
 
           {/* Tab grid */}
           <div className="inline-block min-w-full">
+            {/* Chord row */}
+            {line.chords && line.chords.length > 0 && (
+              <div className="flex items-center gap-0 mb-1">
+                <span className="string-label"> </span>
+                <div className="flex">
+                  {Array.from({ length: line.columns }).map((_, position) => {
+                    const chordEntry = line.chords.find(c => c.position === position);
+                    return (
+                      <div
+                        key={`chord-${position}`}
+                        className="flex items-center justify-center text-xs font-semibold text-primary"
+                        style={{ width: CELL_WIDTH, height: 20 }}
+                      >
+                        {chordEntry?.chord || ''}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {STRING_NAMES.map((stringName, stringIndex) => (
               <div key={stringIndex} className="flex items-center gap-0 mb-1">
                 <span className="string-label">{stringName}</span>
