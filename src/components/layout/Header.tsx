@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
+import { TelegramLinkDialog } from '@/components/telegram/TelegramLinkDialog';
 import logo from '@/assets/logo.png';
 
 export function Header() {
@@ -8,11 +9,12 @@ export function Header() {
 
   return (
     <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm">
-      <div className="container mx-auto px-4 h-14 flex items-center">
+      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src={logo} alt="AllMyTabs" className="w-8 h-8" />
           <span className="font-semibold text-lg text-foreground">AllMyTabs</span>
         </div>
+        <TelegramLinkDialog />
       </div>
     </header>
   );
