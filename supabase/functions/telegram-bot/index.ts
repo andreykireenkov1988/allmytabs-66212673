@@ -53,7 +53,10 @@ function renderTablatureSvg(content: any, title: string): string {
   const padding = 20;
   const labelWidth = 20;
   const titleHeight = title ? 30 : 0;
-  const width = 420;
+
+  // Calculate width dynamically based on the widest line
+  const maxCols = Math.max(...lines.map((l: any) => l.columns || 16), 16);
+  const width = Math.max(420, padding * 2 + labelWidth + maxCols * CELL_W);
 
   // Calculate total height
   let totalH = padding * 2 + titleHeight;
