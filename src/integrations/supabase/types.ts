@@ -200,6 +200,54 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_link_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_links: {
+        Row: {
+          created_at: string
+          id: string
+          telegram_chat_id: number
+          telegram_username: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          telegram_chat_id: number
+          telegram_username?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          telegram_chat_id?: number
+          telegram_username?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
