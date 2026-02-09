@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import SongEditor from "./pages/SongEditor";
 import HarmonicaEditor from "./pages/HarmonicaEditor";
+import ChordDictionary from "./pages/ChordDictionary";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/song/:id" element={<SongEditor />} />
             <Route path="/harmonica/:id" element={<HarmonicaEditor />} />
+            <Route path="/chords" element={<ChordDictionary />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
