@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { findChord } from '@/lib/chordDatabase';
+import { findChordFull } from '@/lib/chordDatabaseFull';
 import { ChordDiagram } from './ChordDiagram';
 
 interface ChordModalProps {
@@ -9,11 +9,11 @@ interface ChordModalProps {
 }
 
 export function ChordModal({ chordName, open, onOpenChange }: ChordModalProps) {
-  const chord = chordName ? findChord(chordName) : null;
+  const chord = chordName ? findChordFull(chordName) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">
             {chordName || 'Аккорд'}

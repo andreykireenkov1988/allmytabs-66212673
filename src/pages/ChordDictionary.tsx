@@ -4,28 +4,36 @@ import { Footer } from '@/components/layout/Footer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ChordDiagram } from '@/components/chord/ChordDiagram';
-import { CHORD_DATABASE, ROOT_NOTES, CHORD_TYPES, getChordTypeLabel } from '@/lib/chordDatabase';
+import { getAllChords } from '@/lib/chordDatabaseFull';
 import { Search, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+
+const ROOT_NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
+
+const SUFFIX_GROUPS = [
+  { label: 'Основные', suffixes: ['', 'm', '7', 'm7', 'maj7'] },
+  { label: 'Sus', suffixes: ['sus2', 'sus4', '7sus4'] },
+  { label: 'Расширенные', suffixes: ['9', '11', '13', 'maj9', 'maj11', 'maj13', 'm9', 'm11'] },
+  { label: 'Другие', suffixes: ['dim', 'dim7', 'aug', '5', '6', 'add9', 'madd9', '7b5', '7b9', '7#9'] },
+];
 
 export default function ChordDictionary() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedRoot, setSelectedRoot] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedSuffix, setSelectedSuffix] = useState<string | null>(null);
+  const [expandedChord, setExpandedChord] = useState<string | null>(null);
+
+  const allChords = useMemo(() => {
+    const chords = getAllChords();
+    // Remove H duplicates from listing
+    return chords.filter(c => !c.key.startsWith('H'));
+  }, []);
 
   const filteredChords = useMemo(() => {
-    let chords = CHORD_DATABASE;
-
-    // Remove duplicates (H = B, Bb = A#)
-    const seen = new Set<string>();
-    chords = chords.filter(c => {
-      if (seen.has(c.key)) return false;
-      seen.add(c.key);
-      return true;
-    });
+    let chords = allChords;
 
     if (search) {
       const q = search.toLowerCase();
@@ -34,27 +42,26 @@ export default function ChordDictionary() {
 
     if (selectedRoot) {
       chords = chords.filter(c => {
-        const root = c.key.match(/^[A-H][#b]?/)?.[0];
+        const root = c.key.match(/^[A-G][#b]?/)?.[0];
         return root === selectedRoot;
       });
     }
 
-    if (selectedType !== null) {
+    if (selectedSuffix !== null) {
       chords = chords.filter(c => {
-        const type = c.key.replace(/^[A-H][#b]?/, '');
-        return type === selectedType;
+        const suffix = c.key.replace(/^[A-G][#b]?/, '');
+        return suffix === selectedSuffix;
       });
     }
 
     return chords;
-  }, [search, selectedRoot, selectedType]);
+  }, [allChords, search, selectedRoot, selectedSuffix]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
-        {/* Back button */}
+      <main className="flex-1 container mx-auto px-4 py-6 max-w-5xl">
         {user && (
           <Button
             variant="ghost"
@@ -67,7 +74,8 @@ export default function ChordDictionary() {
           </Button>
         )}
 
-        <h1 className="text-2xl font-bold text-foreground mb-6">Справочник аккордов</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Справочник аккордов</h1>
+        <p className="text-sm text-muted-foreground mb-6">{allChords.length} аккордов в базе</p>
 
         {/* Search */}
         <div className="relative mb-4">
@@ -88,7 +96,7 @@ export default function ChordDictionary() {
             onClick={() => setSelectedRoot(null)}
             className="h-7 text-xs px-2"
           >
-            Все
+            Все ноты
           </Button>
           {ROOT_NOTES.map(note => (
             <Button
@@ -103,26 +111,28 @@ export default function ChordDictionary() {
           ))}
         </div>
 
-        {/* Type filter */}
+        {/* Suffix filter by groups */}
         <div className="flex flex-wrap gap-1.5 mb-6">
           <Button
-            variant={selectedType === null ? 'default' : 'outline'}
+            variant={selectedSuffix === null ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setSelectedType(null)}
+            onClick={() => setSelectedSuffix(null)}
             className="h-7 text-xs px-2"
           >
             Все типы
           </Button>
-          {CHORD_TYPES.map(type => (
-            <Button
-              key={type || '_major'}
-              variant={selectedType === type ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedType(selectedType === type ? null : type)}
-              className="h-7 text-xs px-2"
-            >
-              {getChordTypeLabel(type)}
-            </Button>
+          {SUFFIX_GROUPS.map(group => (
+            group.suffixes.map(suffix => (
+              <Button
+                key={suffix || '_major'}
+                variant={selectedSuffix === suffix ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedSuffix(selectedSuffix === suffix ? null : suffix)}
+                className="h-7 text-xs px-2"
+              >
+                {suffix || 'Мажор'}
+              </Button>
+            ))
           ))}
         </div>
 
@@ -132,22 +142,43 @@ export default function ChordDictionary() {
             Аккорды не найдены
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {filteredChords.map(chord => (
-              <div key={chord.key} className="glass-card p-4 flex flex-col items-center gap-2">
-                <h3 className="text-lg font-bold text-foreground">{chord.name}</h3>
-                <div className="flex flex-col gap-4">
-                  {chord.voicings.map((voicing, i) => (
-                    <ChordDiagram
-                      key={i}
-                      voicing={voicing}
-                      chordName={chord.voicings.length > 1 ? `Вар. ${i + 1}` : ''}
-                      size="sm"
-                    />
-                  ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {filteredChords.map(chord => {
+              const isExpanded = expandedChord === chord.key;
+              return (
+                <div
+                  key={chord.key}
+                  className="glass-card p-3 flex flex-col items-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => setExpandedChord(isExpanded ? null : chord.key)}
+                >
+                  <h3 className="text-base font-bold text-foreground mb-2">{chord.name}</h3>
+                  {/* Always show first voicing */}
+                  <ChordDiagram
+                    voicing={chord.voicings[0]}
+                    chordName=""
+                    size="sm"
+                  />
+                  {/* Show remaining voicings when expanded */}
+                  {isExpanded && chord.voicings.length > 1 && (
+                    <div className="mt-3 flex flex-col gap-3 border-t border-border/50 pt-3">
+                      {chord.voicings.slice(1).map((voicing, i) => (
+                        <ChordDiagram
+                          key={i}
+                          voicing={voicing}
+                          chordName={`Вар. ${i + 2}`}
+                          size="sm"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {chord.voicings.length > 1 && (
+                    <span className="text-[10px] text-muted-foreground mt-1">
+                      {isExpanded ? 'свернуть' : `ещё ${chord.voicings.length - 1} вар.`}
+                    </span>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
