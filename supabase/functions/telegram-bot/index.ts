@@ -221,19 +221,33 @@ function renderHarmonicaSvg(content: any, title: string): string {
 // ── SVG to PNG conversion using svg2png-wasm ───────────────
 
 let wasmInitialized = false;
+let fontData: Uint8Array | null = null;
 
 async function ensureWasm() {
   if (wasmInitialized) return;
+  
+  // Load WASM
   const wasmUrl = "https://esm.sh/svg2png-wasm@1.4.1/svg2png_wasm_bg.wasm";
-  const res = await fetch(wasmUrl);
-  const wasm = await res.arrayBuffer();
+  const wasmRes = await fetch(wasmUrl);
+  const wasm = await wasmRes.arrayBuffer();
   await initialize(wasm);
+  
+  // Load a monospace font for text rendering
+  const fontUrl = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosansmono/NotoSansMono%5Bwdth%2Cwght%5D.ttf";
+  const fontRes = await fetch(fontUrl);
+  fontData = new Uint8Array(await fontRes.arrayBuffer());
+  
   wasmInitialized = true;
 }
 
 async function svgToPng(svgString: string): Promise<Uint8Array> {
   await ensureWasm();
-  return await svg2png(svgString, { scale: 2 });
+  const options: any = { scale: 2 };
+  if (fontData) {
+    options.fonts = [fontData];
+    options.defaultFontFamily = { monospaceFamily: "Noto Sans Mono" };
+  }
+  return await svg2png(svgString, options);
 }
 
 // ── Telegram API helpers ───────────────────────────────────────
