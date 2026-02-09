@@ -1,9 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  ImageMagick,
-  initializeImageMagick,
-  MagickFormat,
-} from "npm:@imagemagick/magick-wasm@0.0.30";
+import { initialize, svg2png } from "https://esm.sh/svg2png-wasm@1.4.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,36 +218,22 @@ function renderHarmonicaSvg(content: any, title: string): string {
   return svg;
 }
 
-// ── SVG to PNG conversion using ImageMagick WASM ───────────────
+// ── SVG to PNG conversion using svg2png-wasm ───────────────
 
-let magickInitialized = false;
+let wasmInitialized = false;
 
-async function ensureMagick() {
-  if (magickInitialized) return;
-  const wasmBytes = await Deno.readFile(
-    new URL(
-      "magick.wasm",
-      import.meta.resolve("npm:@imagemagick/magick-wasm@0.0.30"),
-    ),
-  );
-  await initializeImageMagick(wasmBytes);
-  magickInitialized = true;
+async function ensureWasm() {
+  if (wasmInitialized) return;
+  const wasmUrl = "https://esm.sh/svg2png-wasm@1.4.1/svg2png_wasm_bg.wasm";
+  const res = await fetch(wasmUrl);
+  const wasm = await res.arrayBuffer();
+  await initialize(wasm);
+  wasmInitialized = true;
 }
 
 async function svgToPng(svgString: string): Promise<Uint8Array> {
-  await ensureMagick();
-  const svgBytes = new TextEncoder().encode(svgString);
-  return new Promise((resolve, reject) => {
-    try {
-      ImageMagick.read(svgBytes, MagickFormat.Svg, (img) => {
-        img.write(MagickFormat.Png, (data) => {
-          resolve(new Uint8Array(data));
-        });
-      });
-    } catch (e) {
-      reject(e);
-    }
-  });
+  await ensureWasm();
+  return await svg2png(svgString, { scale: 2 });
 }
 
 // ── Telegram API helpers ───────────────────────────────────────
