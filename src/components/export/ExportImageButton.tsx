@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,16 +20,7 @@ export function ExportImageButton({ contentRef, filename }: ExportImageButtonPro
 
     setIsExporting(true);
     try {
-      // Get computed background color from CSS
-      const bgColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--background')
-        .trim();
-      const backgroundColor = bgColor ? `hsl(${bgColor})` : '#ffffff';
-
-      await exportElementAsImage(contentRef.current, {
-        filename,
-        backgroundColor,
-      });
+      await exportElementAsImage(contentRef.current, { filename });
       toast.success('Изображение сохранено!');
     } catch (error) {
       toast.error('Ошибка экспорта изображения');
