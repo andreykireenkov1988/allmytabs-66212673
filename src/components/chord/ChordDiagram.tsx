@@ -9,51 +9,46 @@ interface ChordDiagramProps {
 const STRING_NAMES_BOTTOM = ['E', 'A', 'D', 'G', 'B', 'e'];
 
 export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramProps) {
-  const scale = size === 'sm' ? 0.7 : size === 'lg' ? 1.2 : 1;
-  const stringSpacing = 20 * scale;
-  const fretSpacing = 24 * scale;
+  const scale = size === 'sm' ? 0.75 : size === 'lg' ? 1.2 : 1;
+  const stringSpacing = 18 * scale;
+  const fretSpacing = 22 * scale;
   const numFrets = 5;
-  const padding = { top: 36 * scale, bottom: 20 * scale, left: 28 * scale, right: 12 * scale };
-  const dotRadius = 7 * scale;
+  const padding = { top: 28 * scale, bottom: 18 * scale, left: 24 * scale, right: 10 * scale };
+  const dotRadius = 6 * scale;
+  const gridWidth = 5 * stringSpacing;
+  const gridHeight = numFrets * fretSpacing;
 
-  const width = padding.left + 5 * stringSpacing + padding.right;
-  const height = padding.top + numFrets * fretSpacing + padding.bottom;
+  const width = padding.left + gridWidth + padding.right;
+  const height = padding.top + gridHeight + padding.bottom;
 
-  const minFret = voicing.baseFret;
-  const showBaseFret = minFret > 1;
-
-  const fingerColors = [
-    '', // 0 — not used
-    'hsl(var(--primary))',
-    'hsl(var(--primary))',
-    'hsl(var(--primary))',
-    'hsl(var(--primary))',
-  ];
+  const showBaseFret = voicing.baseFret > 1;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-sm font-bold text-foreground">{chordName}</span>
-      <svg width={width} height={height} className="overflow-visible">
-        {/* Nut or position marker */}
+    <div className="flex flex-col items-center gap-0.5">
+      {chordName && (
+        <span className="text-xs font-medium text-muted-foreground">{chordName}</span>
+      )}
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        {/* Nut (thick bar at top) or fret position label */}
         {!showBaseFret ? (
           <rect
             x={padding.left}
             y={padding.top}
-            width={5 * stringSpacing}
-            height={3 * scale}
+            width={gridWidth}
+            height={2.5 * scale}
             fill="hsl(var(--foreground))"
             rx={1}
           />
         ) : (
           <text
-            x={padding.left - 8 * scale}
-            y={padding.top + fretSpacing / 2 + 4 * scale}
+            x={padding.left - 4 * scale}
+            y={padding.top + fretSpacing * 0.5 + 4 * scale}
             textAnchor="end"
-            fontSize={11 * scale}
+            fontSize={9 * scale}
             fill="hsl(var(--muted-foreground))"
             fontFamily="monospace"
           >
-            {minFret}fr
+            {voicing.baseFret}
           </text>
         )}
 
@@ -63,10 +58,10 @@ export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramPr
             key={`fret-${i}`}
             x1={padding.left}
             y1={padding.top + i * fretSpacing}
-            x2={padding.left + 5 * stringSpacing}
+            x2={padding.left + gridWidth}
             y2={padding.top + i * fretSpacing}
             stroke="hsl(var(--border))"
-            strokeWidth={i === 0 && !showBaseFret ? 0 : 1}
+            strokeWidth={1}
           />
         ))}
 
@@ -77,26 +72,25 @@ export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramPr
             x1={padding.left + i * stringSpacing}
             y1={padding.top}
             x2={padding.left + i * stringSpacing}
-            y2={padding.top + numFrets * fretSpacing}
+            y2={padding.top + gridHeight}
             stroke="hsl(var(--muted-foreground))"
-            strokeWidth={1}
-            opacity={0.6}
+            strokeWidth={0.8}
+            opacity={0.5}
           />
         ))}
 
-        {/* Barre */}
-        {voicing.barres?.map((barre, bi) => {
-          const barreFret = barre;
-          // Find first and last strings that use this fret
+        {/* Barres */}
+        {voicing.barres?.map((barreFret, bi) => {
+          // barreFret is the fret position in the diagram window (1-based)
+          // Find the range of strings that are held at this fret
           const barreStrings = voicing.frets
             .map((f, si) => ({ fret: f, si }))
-            .filter(({ fret }) => fret === (minFret > 1 ? minFret : barreFret));
-          
+            .filter(({ fret }) => fret === barreFret);
+
           if (barreStrings.length < 2) return null;
           const first = barreStrings[0].si;
           const last = barreStrings[barreStrings.length - 1].si;
-          const fretPos = minFret > 1 ? 1 : barreFret;
-          const cy = padding.top + (fretPos - 0.5) * fretSpacing;
+          const cy = padding.top + (barreFret - 0.5) * fretSpacing;
 
           return (
             <rect
@@ -107,24 +101,24 @@ export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramPr
               height={dotRadius * 2}
               rx={dotRadius}
               fill="hsl(var(--primary))"
-              opacity={0.9}
+              opacity={0.85}
             />
           );
         })}
 
-        {/* Finger dots and markers */}
+        {/* Finger dots and open/muted markers */}
         {voicing.frets.map((fret, stringIdx) => {
           const x = padding.left + stringIdx * stringSpacing;
 
           if (fret === -1) {
-            // Muted string — X above nut
+            // Muted string — X above
             return (
               <text
-                key={`mute-${stringIdx}`}
+                key={`m-${stringIdx}`}
                 x={x}
-                y={padding.top - 10 * scale}
+                y={padding.top - 6 * scale}
                 textAnchor="middle"
-                fontSize={12 * scale}
+                fontSize={10 * scale}
                 fill="hsl(var(--muted-foreground))"
                 fontWeight="bold"
               >
@@ -134,38 +128,51 @@ export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramPr
           }
 
           if (fret === 0) {
-            // Open string — O above nut
+            // Open string — O above
             return (
               <circle
-                key={`open-${stringIdx}`}
+                key={`o-${stringIdx}`}
                 cx={x}
-                cy={padding.top - 10 * scale}
-                r={4 * scale}
+                cy={padding.top - 9 * scale}
+                r={3.5 * scale}
                 fill="none"
                 stroke="hsl(var(--muted-foreground))"
-                strokeWidth={1.5 * scale}
+                strokeWidth={1.2 * scale}
               />
             );
           }
 
-          // Fretted note
-          const relativeFret = fret - minFret + 1;
-          const cy = padding.top + (relativeFret - 0.5) * fretSpacing;
+          // Fretted note — fret value is already relative (1 = first fret in window)
+          const cy = padding.top + (fret - 0.5) * fretSpacing;
+
+          // Don't render if it's part of a barre (already drawn)
+          // Only skip if barre covers this exact fret & it's not the first/last string of the barre
+          const isInBarre = voicing.barres?.some(b => {
+            if (b !== fret) return false;
+            const barreStrings = voicing.frets
+              .map((f, si) => ({ f, si }))
+              .filter(({ f }) => f === b);
+            const first = barreStrings[0]?.si;
+            const last = barreStrings[barreStrings.length - 1]?.si;
+            return stringIdx > first! && stringIdx < last!;
+          });
+
+          if (isInBarre) return null;
 
           return (
-            <g key={`dot-${stringIdx}`}>
+            <g key={`d-${stringIdx}`}>
               <circle
                 cx={x}
                 cy={cy}
                 r={dotRadius}
-                fill={fingerColors[voicing.fingers[stringIdx]] || 'hsl(var(--primary))'}
+                fill="hsl(var(--primary))"
               />
               {voicing.fingers[stringIdx] > 0 && size !== 'sm' && (
                 <text
                   x={x}
-                  y={cy + 4 * scale}
+                  y={cy + 3.5 * scale}
                   textAnchor="middle"
-                  fontSize={10 * scale}
+                  fontSize={9 * scale}
                   fill="hsl(var(--primary-foreground))"
                   fontWeight="bold"
                 >
@@ -179,11 +186,11 @@ export function ChordDiagram({ voicing, chordName, size = 'md' }: ChordDiagramPr
         {/* String names at bottom */}
         {STRING_NAMES_BOTTOM.map((name, i) => (
           <text
-            key={`name-${i}`}
+            key={`n-${i}`}
             x={padding.left + i * stringSpacing}
-            y={padding.top + numFrets * fretSpacing + 14 * scale}
+            y={padding.top + gridHeight + 12 * scale}
             textAnchor="middle"
-            fontSize={9 * scale}
+            fontSize={8 * scale}
             fill="hsl(var(--muted-foreground))"
             fontFamily="monospace"
           >
