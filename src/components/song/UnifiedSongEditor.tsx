@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Song, SongBlock, ChordsBlockContent, isChordsContent, isTablatureContent } from '@/types/song';
 import { TablatureContent } from '@/types/tablature';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { ChordsBlockViewer } from './blocks/ChordsBlockViewer';
 import { TablatureBlockViewer } from './blocks/TablatureBlockViewer';
 import { TransposeControls } from './TransposeControls';
 import { FullSongExportImportDialog } from './FullSongExportImportDialog';
+import { ExportImageButton } from '@/components/export/ExportImageButton';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -61,6 +62,7 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
   const [isViewMode, setIsViewMode] = useState(true);
   const [transpose, setTranspose] = useState(0);
   const [useFlats, setUseFlats] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Debounced save for song metadata
   const debouncedSaveSong = useDebouncedCallback(
@@ -293,6 +295,11 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
             </div>
           )}
           
+          <ExportImageButton
+            contentRef={exportRef}
+            filename={`${artist ? artist + ' - ' : ''}${title}`}
+          />
+          
           <FullSongExportImportDialog 
             song={song}
             blocks={blocks}
@@ -333,7 +340,7 @@ export function UnifiedSongEditor({ song, onBack, onSaveSong, isSaving }: Unifie
       )}
 
       {/* Blocks */}
-      <div className="space-y-6">
+      <div ref={isViewMode ? exportRef : undefined} className="space-y-6">
         {blocks.map((block, index) => (
           <div key={block.id} className="glass-card p-4">
             {/* Block header */}

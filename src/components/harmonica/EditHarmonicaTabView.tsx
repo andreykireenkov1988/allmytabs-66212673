@@ -3,6 +3,7 @@ import { HarmonicaTab, HarmonicaTabContent, createEmptyHarmonicaLine } from '@/t
 import { HarmonicaTabEditor } from './HarmonicaTabEditor';
 import { HarmonicaTabViewer } from './HarmonicaTabViewer';
 import { HarmonicaExportImportDialog } from './HarmonicaExportImportDialog';
+import { ExportImageButton } from '@/components/export/ExportImageButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Loader2, Eye, Pencil } from 'lucide-react';
@@ -30,6 +31,7 @@ export function EditHarmonicaTabView({
   });
   const [isSavingState, setIsSavingState] = useState(false);
   const [isViewMode, setIsViewMode] = useState(true);
+  const exportRef = useRef<HTMLDivElement>(null);
   const initialLoad = useRef(true);
 
   // Debounced auto-save function
@@ -82,6 +84,11 @@ export function EditHarmonicaTabView({
             </div>
           )}
           
+          <ExportImageButton
+            contentRef={exportRef}
+            filename={title}
+          />
+          
           <HarmonicaExportImportDialog
             title={title}
             content={content}
@@ -115,7 +122,7 @@ export function EditHarmonicaTabView({
       </div>
 
       {isViewMode ? (
-        <div className="glass-card p-6">
+        <div ref={exportRef} className="glass-card p-6">
           <HarmonicaTabViewer content={content} />
         </div>
       ) : (
