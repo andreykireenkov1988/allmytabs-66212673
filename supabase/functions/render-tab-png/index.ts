@@ -23,7 +23,10 @@ function renderChordsSvg(text: string, title: string): string {
   const lineHeight = 20;
   const padding = 20;
   const titleHeight = title ? 30 : 0;
-  const width = 400;
+
+  // Calculate width based on longest line
+  const maxLineLen = Math.max(...lines.map(l => l.length), 20);
+  const width = Math.max(400, padding * 2 + maxLineLen * 8);
   const height = padding * 2 + titleHeight + lines.length * lineHeight + 10;
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`;
@@ -53,13 +56,13 @@ function renderTablatureSvg(content: any, title: string): string {
   const titleHeight = title ? 30 : 0;
 
   const maxCols = Math.max(...lines.map((l: any) => l.columns || 16), 16);
-  const width = Math.max(420, padding * 2 + labelWidth + maxCols * CELL_W);
+  const width = padding * 2 + labelWidth + maxCols * CELL_W + 20;
 
   let totalH = padding * 2 + titleHeight;
   for (const line of lines) {
     if (line.title) totalH += 22;
     if (line.chords && line.chords.length > 0) totalH += 22;
-    totalH += STRING_NAMES.length * CELL_H + 12;
+    totalH += STRING_NAMES.length * CELL_H + 16;
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalH}">`;
@@ -122,7 +125,7 @@ function renderTablatureSvg(content: any, title: string): string {
       }
     }
 
-    y += STRING_NAMES.length * CELL_H + 12;
+    y += STRING_NAMES.length * CELL_H + 16;
   }
 
   svg += `</svg>`;
@@ -135,12 +138,15 @@ function renderHarmonicaSvg(content: any, title: string): string {
   const titleHeight = title ? 30 : 0;
   const cellW = 36;
   const cellH = 28;
-  const width = 420;
+
+  // Dynamic width based on max columns
+  const maxCols = Math.max(...lines.map((l: any) => l.columns || 16), 16);
+  const width = Math.max(420, padding * 2 + maxCols * cellW + 20);
 
   let totalH = padding * 2 + titleHeight;
   for (const line of lines) {
     if (line.title) totalH += 22;
-    totalH += cellH + 12;
+    totalH += cellH + 16;
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${totalH}">`;
@@ -189,7 +195,7 @@ function renderHarmonicaSvg(content: any, title: string): string {
       }
     }
 
-    y += cellH + 12;
+    y += cellH + 16;
   }
 
   svg += `</svg>`;
@@ -247,9 +253,8 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !data?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
