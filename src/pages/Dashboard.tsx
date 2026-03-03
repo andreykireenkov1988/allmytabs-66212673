@@ -12,6 +12,7 @@ import { CreateHarmonicaTabDialog } from '@/components/harmonica/CreateHarmonica
 import { ContentTable } from '@/components/dashboard/ContentTable';
 import { CreateCollectionDialog } from '@/components/collection/CreateCollectionDialog';
 import { CollectionExportImportDialog } from '@/components/collection/CollectionExportImportDialog';
+import { ObsidianExportDialog } from '@/components/collection/ObsidianExportDialog';
 import { DeleteCollectionDialog } from '@/components/collection/DeleteCollectionDialog';
 import { Song, ParsedSongData } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
@@ -334,6 +335,7 @@ export default function Dashboard() {
             <CreateHarmonicaTabDialog onSubmit={handleCreateHarmonicaTab} isLoading={createHarmonicaTab.isPending} />
             <CreateCollectionDialog onSubmit={handleCreateCollection} isLoading={createCollection.isPending} />
             <CollectionExportImportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} onImport={handleImportCollection} />
+            <ObsidianExportDialog songs={songs} harmonicaTabs={harmonicaTabs} collections={collections} />
           </div>
         </div>
 
