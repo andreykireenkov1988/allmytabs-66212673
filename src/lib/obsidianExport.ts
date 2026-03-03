@@ -3,6 +3,7 @@ import { Song, SongBlock, ChordsBlockContent, isTablatureContent } from '@/types
 import { HarmonicaTab, formatHarmonicaNote } from '@/types/harmonica';
 import { TablatureContent, STRING_NAMES } from '@/types/tablature';
 import { Collection } from '@/types/collection';
+import { supabase } from '@/integrations/supabase/client';
 
 // ============ YAML FRONTMATTER ============
 
@@ -127,13 +128,47 @@ function safeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'untitled';
 }
 
+// ============ RENDER PNG via Edge Function ============
+
+async function renderBlockPng(
+  type: 'chords' | 'tablature' | 'harmonica',
+  content: any,
+  title: string
+): Promise<Uint8Array | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+
+    const response = await supabase.functions.invoke('render-tab-png', {
+      body: { type, content, title },
+    });
+
+    if (response.error || !response.data) return null;
+
+    // response.data is a Blob
+    const blob = response.data as Blob;
+    const arrayBuffer = await blob.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  } catch (e) {
+    console.error('Error rendering PNG:', e);
+    return null;
+  }
+}
+
 // ============ ZIP EXPORT ============
+
+export interface ObsidianExportOptions {
+  includeImages?: boolean;
+  onProgress?: (current: number, total: number) => void;
+}
 
 export async function exportToObsidianZip(
   songs: Song[],
   harmonicaTabs: HarmonicaTab[],
-  collections: Collection[]
+  collections: Collection[],
+  options: ObsidianExportOptions = {}
 ): Promise<Blob> {
+  const { includeImages = false, onProgress } = options;
   const zip = new JSZip();
   const root = zip.folder('AllMyTabs')!;
 
@@ -142,18 +177,48 @@ export async function exportToObsidianZip(
   // Group by collection
   const uncategorized = root.folder('Без коллекции')!;
 
+  let completed = 0;
+  const totalItems = songs.length + harmonicaTabs.length;
+
   for (const song of songs) {
     const collName = song.collection_id ? collectionMap.get(song.collection_id) : null;
     const folder = collName ? root.folder(safeFilename(collName))! : uncategorized;
-    const filename = `${safeFilename(song.artist ? `${song.artist} - ${song.title}` : song.title)}.md`;
-    folder.file(filename, formatSongObsidian(song, collName || undefined));
+    const baseName = safeFilename(song.artist ? `${song.artist} - ${song.title}` : song.title);
+    folder.file(`${baseName}.md`, formatSongObsidian(song, collName || undefined));
+
+    // Render blocks as PNG images
+    if (includeImages && song.blocks?.length) {
+      const imgFolder = folder.folder(`${baseName}_images`)!;
+      const blocks = [...song.blocks].sort((a, b) => a.position - b.position);
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const blockTitle = block.title || (block.block_type === 'chords' ? 'Аккорды' : 'Табулатура');
+        const png = await renderBlockPng(block.block_type as any, block.content, blockTitle);
+        if (png) {
+          imgFolder.file(`${safeFilename(blockTitle)}_${i + 1}.png`, png);
+        }
+      }
+    }
+
+    completed++;
+    onProgress?.(completed, totalItems);
   }
 
   for (const tab of harmonicaTabs) {
     const collName = tab.collection_id ? collectionMap.get(tab.collection_id) : null;
     const folder = collName ? root.folder(safeFilename(collName))! : uncategorized;
-    const filename = `${safeFilename(tab.artist ? `${tab.artist} - ${tab.title}` : tab.title)} (harmonica).md`;
-    folder.file(filename, formatHarmonicaTabObsidian(tab, collName || undefined));
+    const baseName = safeFilename(tab.artist ? `${tab.artist} - ${tab.title}` : tab.title);
+    folder.file(`${baseName} (harmonica).md`, formatHarmonicaTabObsidian(tab, collName || undefined));
+
+    if (includeImages) {
+      const png = await renderBlockPng('harmonica', tab.content, tab.title);
+      if (png) {
+        folder.file(`${baseName} (harmonica).png`, png);
+      }
+    }
+
+    completed++;
+    onProgress?.(completed, totalItems);
   }
 
   // Create a Dataview index note

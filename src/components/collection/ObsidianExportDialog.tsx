@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, Download, Archive } from 'lucide-react';
+import { ExternalLink, Download, Archive, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song } from '@/types/song';
 import { HarmonicaTab } from '@/types/harmonica';
@@ -34,11 +36,24 @@ export function ObsidianExportDialog({
   const [open, setOpen] = useState(false);
   const [vaultName, setVaultName] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [includeImages, setIncludeImages] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
 
   const handleZipExport = async () => {
     try {
       setIsExporting(true);
-      const blob = await exportToObsidianZip(songs, harmonicaTabs, collections);
+      setProgress(0);
+      setProgressTotal(songs.length + harmonicaTabs.length);
+
+      const blob = await exportToObsidianZip(songs, harmonicaTabs, collections, {
+        includeImages,
+        onProgress: (current, total) => {
+          setProgress(current);
+          setProgressTotal(total);
+        },
+      });
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -53,6 +68,7 @@ export function ObsidianExportDialog({
       toast.error('Ошибка создания ZIP файла');
     } finally {
       setIsExporting(false);
+      setProgress(0);
     }
   };
 
@@ -66,6 +82,7 @@ export function ObsidianExportDialog({
   };
 
   const totalCount = songs.length + harmonicaTabs.length;
+  const progressPercent = progressTotal > 0 ? Math.round((progress / progressTotal) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -109,6 +126,23 @@ export function ObsidianExportDialog({
               </ul>
             </div>
 
+            <div className="flex items-center space-x-3 rounded-lg border border-border p-4">
+              <Checkbox
+                id="include-images"
+                checked={includeImages}
+                onCheckedChange={(checked) => setIncludeImages(checked === true)}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="include-images" className="flex items-center gap-2 cursor-pointer">
+                  <ImageIcon className="w-4 h-4" />
+                  Включить PNG-изображения
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Каждый блок аккордов и табулатуры будет отрендерен как картинка (занимает больше времени)
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-border p-4 space-y-2 bg-muted/50">
               <p className="text-sm font-medium">Каждый файл содержит:</p>
               <ul className="text-sm text-muted-foreground space-y-1">
@@ -118,13 +152,24 @@ export function ObsidianExportDialog({
               </ul>
             </div>
 
+            {isExporting && progressTotal > 0 && (
+              <div className="space-y-2">
+                <Progress value={progressPercent} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">
+                  {progress} / {progressTotal} — {progressPercent}%
+                </p>
+              </div>
+            )}
+
             <Button 
               onClick={handleZipExport} 
               className="w-full gap-2" 
               disabled={isExporting || totalCount === 0}
             >
               <Download className="w-4 h-4" />
-              {isExporting ? 'Создание архива...' : `Скачать ZIP (${totalCount} файлов)`}
+              {isExporting 
+                ? (includeImages ? `Рендер изображений... ${progress}/${progressTotal}` : 'Создание архива...') 
+                : `Скачать ZIP (${totalCount} файлов${includeImages ? ' + PNG' : ''})`}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center">
