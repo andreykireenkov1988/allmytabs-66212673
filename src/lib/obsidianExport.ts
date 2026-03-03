@@ -50,7 +50,12 @@ function formatTablatureLineObsidian(line: { notes: any[]; connections?: any[]; 
   return parts.join('\n');
 }
 
-function formatSongObsidian(song: Song, collectionName?: string): string {
+interface ImageRef {
+  filename: string;
+  blockTitle: string;
+}
+
+function formatSongObsidian(song: Song, collectionName?: string, imageRefs?: ImageRef[]): string {
   const tags = ['allmytabs', 'guitar'];
   if (song.blocks?.some(b => b.block_type === 'chords')) tags.push('chords');
   if (song.blocks?.some(b => b.block_type === 'tablature')) tags.push('tablature');
@@ -68,6 +73,17 @@ function formatSongObsidian(song: Song, collectionName?: string): string {
   const parts: string[] = [frontmatter, '', `# ${song.title}`];
   if (song.artist) parts.push(`**Исполнитель:** ${song.artist}`);
   parts.push('');
+
+  // If we have image refs, embed them grouped by block
+  if (imageRefs && imageRefs.length > 0) {
+    parts.push('## Изображения');
+    parts.push('');
+    for (const ref of imageRefs) {
+      parts.push(`### ${ref.blockTitle}`);
+      parts.push(`![[images/${ref.filename}]]`);
+      parts.push('');
+    }
+  }
 
   const blocks = song.blocks || [];
   for (const block of blocks.sort((a, b) => a.position - b.position)) {
@@ -91,7 +107,7 @@ function formatSongObsidian(song: Song, collectionName?: string): string {
   return parts.join('\n');
 }
 
-function formatHarmonicaTabObsidian(tab: HarmonicaTab, collectionName?: string): string {
+function formatHarmonicaTabObsidian(tab: HarmonicaTab, collectionName?: string, imageRefs?: ImageRef[]): string {
   const frontmatter = buildFrontmatter({
     title: tab.title,
     artist: tab.artist,
@@ -104,6 +120,15 @@ function formatHarmonicaTabObsidian(tab: HarmonicaTab, collectionName?: string):
   const parts: string[] = [frontmatter, '', `# ${tab.title}`];
   if (tab.artist) parts.push(`**Исполнитель:** ${tab.artist}`);
   parts.push('');
+
+  if (imageRefs && imageRefs.length > 0) {
+    parts.push('## Изображения');
+    parts.push('');
+    for (const ref of imageRefs) {
+      parts.push(`![[images/${ref.filename}]]`);
+      parts.push('');
+    }
+  }
 
   for (const line of tab.content.lines || []) {
     if (line.title) parts.push(`## ${line.title}`);
@@ -139,7 +164,6 @@ async function renderBlockPng(
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return null;
 
-    // Use fetch directly to get binary response properly
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-tab-png`;
     const response = await fetch(url, {
       method: 'POST',
@@ -183,31 +207,35 @@ export async function exportToObsidianZip(
 
   const collectionMap = new Map(collections.map(c => [c.id, c.name]));
 
-  // Group by collection
-  const uncategorized = root.folder('Без коллекции')!;
-
   let completed = 0;
   const totalItems = songs.length + harmonicaTabs.length;
 
   for (const song of songs) {
     const collName = song.collection_id ? collectionMap.get(song.collection_id) : null;
-    const folder = collName ? root.folder(safeFilename(collName))! : uncategorized;
+    const collFolder = collName ? root.folder(safeFilename(collName))! : root.folder('Без коллекции')!;
     const baseName = safeFilename(song.artist ? `${song.artist} - ${song.title}` : song.title);
-    folder.file(`${baseName}.md`, formatSongObsidian(song, collName || undefined));
+    
+    // Each song gets its own folder
+    const songFolder = collFolder.folder(baseName)!;
+    const imageRefs: ImageRef[] = [];
 
-    // Render blocks as PNG images
+    // Render images if enabled
     if (includeImages && song.blocks?.length) {
-      const imgFolder = folder.folder(`${baseName}_images`)!;
+      const imgFolder = songFolder.folder('images')!;
       const blocks = [...song.blocks].sort((a, b) => a.position - b.position);
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
         const blockTitle = block.title || (block.block_type === 'chords' ? 'Аккорды' : 'Табулатура');
+        const filename = `${safeFilename(blockTitle)}_${i + 1}.png`;
         const png = await renderBlockPng(block.block_type as any, block.content, blockTitle);
         if (png) {
-          imgFolder.file(`${safeFilename(blockTitle)}_${i + 1}.png`, png);
+          imgFolder.file(filename, png);
+          imageRefs.push({ filename, blockTitle });
         }
       }
     }
+
+    songFolder.file(`${baseName}.md`, formatSongObsidian(song, collName || undefined, imageRefs));
 
     completed++;
     onProgress?.(completed, totalItems);
@@ -215,22 +243,29 @@ export async function exportToObsidianZip(
 
   for (const tab of harmonicaTabs) {
     const collName = tab.collection_id ? collectionMap.get(tab.collection_id) : null;
-    const folder = collName ? root.folder(safeFilename(collName))! : uncategorized;
+    const collFolder = collName ? root.folder(safeFilename(collName))! : root.folder('Без коллекции')!;
     const baseName = safeFilename(tab.artist ? `${tab.artist} - ${tab.title}` : tab.title);
-    folder.file(`${baseName} (harmonica).md`, formatHarmonicaTabObsidian(tab, collName || undefined));
+    
+    const tabFolder = collFolder.folder(`${baseName} (harmonica)`)!;
+    const imageRefs: ImageRef[] = [];
 
     if (includeImages) {
+      const filename = `${baseName}.png`;
       const png = await renderBlockPng('harmonica', tab.content, tab.title);
       if (png) {
-        folder.file(`${baseName} (harmonica).png`, png);
+        const imgFolder = tabFolder.folder('images')!;
+        imgFolder.file(filename, png);
+        imageRefs.push({ filename, blockTitle: tab.title });
       }
     }
+
+    tabFolder.file(`${baseName} (harmonica).md`, formatHarmonicaTabObsidian(tab, collName || undefined, imageRefs));
 
     completed++;
     onProgress?.(completed, totalItems);
   }
 
-  // Create a Dataview index note
+  // Dataview index
   const indexContent = buildFrontmatter({
     title: 'AllMyTabs Index',
     tags: ['allmytabs', 'index'],
