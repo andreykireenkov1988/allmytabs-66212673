@@ -76,7 +76,7 @@ export async function exportToObsidianZip(
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
       const blockTitle = block.title || (block.block_type === 'chords' ? 'Аккорды' : 'Табулатура');
-      const filename = `${safeFilename(blockTitle)}${blocks.length > 1 ? `_${i + 1}` : ''}.png`;
+      const filename = `${baseName}${blocks.length > 1 ? ` - ${blockTitle}` : ''}.png`;
       const png = await renderBlockPng(block.block_type as any, block.content, blockTitle);
       if (png) {
         songFolder.file(filename, png);
