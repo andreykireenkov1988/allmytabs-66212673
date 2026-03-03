@@ -139,15 +139,24 @@ async function renderBlockPng(
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return null;
 
-    const response = await supabase.functions.invoke('render-tab-png', {
-      body: { type, content, title },
+    // Use fetch directly to get binary response properly
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-tab-png`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ type, content, title }),
     });
 
-    if (response.error || !response.data) return null;
+    if (!response.ok) {
+      console.error('render-tab-png error:', response.status, await response.text());
+      return null;
+    }
 
-    // response.data is a Blob
-    const blob = response.data as Blob;
-    const arrayBuffer = await blob.arrayBuffer();
+    const arrayBuffer = await response.arrayBuffer();
     return new Uint8Array(arrayBuffer);
   } catch (e) {
     console.error('Error rendering PNG:', e);

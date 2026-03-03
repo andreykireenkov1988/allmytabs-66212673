@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { initialize, svg2png } from "https://esm.sh/svg2png-wasm@1.4.1";
 
@@ -13,7 +12,7 @@ const CELL_W = 28;
 const CELL_H = 24;
 const FONT = "monospace";
 
-// ── SVG Renderers (shared with telegram-bot) ──────────────────
+// ── SVG Renderers ──────────────────────────────────────────────
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -228,14 +227,14 @@ async function svgToPng(svgString: string): Promise<Uint8Array> {
 
 // ── Main handler ───────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -248,8 +247,9 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const token = authHeader.replace("Bearer ", "");
+    const { data, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !data?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -268,8 +268,7 @@ serve(async (req) => {
     let svgStr: string;
 
     if (type === "chords") {
-      const text = content.text || "";
-      svgStr = renderChordsSvg(text, title || "");
+      svgStr = renderChordsSvg(content.text || "", title || "");
     } else if (type === "tablature") {
       svgStr = renderTablatureSvg(content, title || "");
     } else if (type === "harmonica") {
@@ -287,7 +286,6 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "image/png",
-        "Content-Disposition": `inline; filename="tab.png"`,
       },
     });
   } catch (error) {
