@@ -155,7 +155,21 @@ function renderHarmonicaSvg(content: any, title: string): string {
   const titleHeight = title ? 30 : 0;
   const cellW = 36;
   const cellH = 28;
-  const width = 420;
+
+  // Dynamic width: use actual content extent, not just declared columns
+  let maxUsedPos = 0;
+  for (const line of lines) {
+    const cols = line.columns || 16;
+    if (cols > maxUsedPos) maxUsedPos = cols;
+    for (const n of (line.notes || [])) {
+      if (n.position + 1 > maxUsedPos) maxUsedPos = n.position + 1;
+    }
+    for (const c of (line.chords || [])) {
+      if (c.position + 1 > maxUsedPos) maxUsedPos = c.position + 1;
+    }
+  }
+  const maxCols = Math.max(maxUsedPos, 8);
+  const width = Math.max(420, padding * 2 + maxCols * cellW + 20);
 
   let totalH = padding * 2 + titleHeight;
   for (const line of lines) {
